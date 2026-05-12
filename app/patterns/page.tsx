@@ -79,13 +79,21 @@ export default function PatternsPage() {
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-6 text-sm text-gray-500">
+                    <div className="flex items-center gap-6 text-sm text-gray-500 mb-3">
                       <span>📥 {pattern.inputs.length} inputs</span>
                       <span>📤 {pattern.outputs.length} outputs</span>
                       <span>🧩 {pattern.components.length} components</span>
                       <span>📋 {pattern.workflow.length} steps</span>
                       <span>💻 {pattern.examples.length} examples</span>
                     </div>
+
+                    <Link
+                      href={`/patterns/${pattern.id}/simulate`}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      ▶ Try Interactive Demo
+                    </Link>
                   </div>
 
                   <div className="ml-4">

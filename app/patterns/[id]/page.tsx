@@ -209,6 +209,12 @@ export default async function PatternDetailPage({ params }: { params: Promise<{ 
               <h3 className="font-bold text-gray-900 mb-4">Actions</h3>
               <div className="space-y-3">
                 <Link
+                  href={`/patterns/${pattern.id}/simulate`}
+                  className="block w-full px-4 py-2 bg-green-600 text-white text-center font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Simulate Pattern
+                </Link>
+                <Link
                   href={`/generate?pattern=${pattern.id}`}
                   className="block w-full px-4 py-2 bg-blue-600 text-white text-center font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
