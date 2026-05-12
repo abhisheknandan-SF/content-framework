@@ -57,10 +57,10 @@ export default function Home() {
                 <span className="inline-block ml-2 group-hover:translate-x-1 transition-transform">→</span>
               </Link>
               <Link
-                href="/patterns"
+                href="/workflows"
                 className="px-8 py-4 bg-white text-gray-900 font-semibold rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all"
               >
-                View Examples
+                View Example Workflows
               </Link>
             </div>
 
