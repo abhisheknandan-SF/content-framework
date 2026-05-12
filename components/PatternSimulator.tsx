@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import type { DocumentPattern } from '@/lib/patterns/types';
+import PDFTextExtractionPrototype from './prototypes/PDFTextExtractionPrototype';
+import DocumentViewerAnnotationPrototype from './prototypes/DocumentViewerAnnotationPrototype';
 
 interface PatternSimulatorProps {
   pattern: DocumentPattern;
@@ -15,6 +17,7 @@ export default function PatternSimulator({ pattern }: PatternSimulatorProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [outputs, setOutputs] = useState<Record<string, unknown>>({});
   const [showResults, setShowResults] = useState(false);
+  const [showPrototype, setShowPrototype] = useState(false);
 
   const handleInputChange = (inputId: string, value: File | string | null) => {
     setInputValues((prev) => ({ ...prev, [inputId]: value }));
@@ -75,6 +78,7 @@ export default function PatternSimulator({ pattern }: PatternSimulatorProps) {
     setOutputs(mockOutputs);
     setIsProcessing(false);
     setShowResults(true);
+    setShowPrototype(true);
   };
 
   const reset = () => {
@@ -83,12 +87,35 @@ export default function PatternSimulator({ pattern }: PatternSimulatorProps) {
     setOutputs({});
     setShowResults(false);
     setIsProcessing(false);
+    setShowPrototype(false);
+  };
+
+  const renderPrototype = () => {
+    const pdfFileInput = pattern.inputs.find(input => input.type === 'file' && input.validation?.mimeTypes?.includes('application/pdf'));
+    const fileValue = pdfFileInput ? (inputValues[pdfFileInput.id] as File | null) : null;
+
+    switch (pattern.id) {
+      case 'pdf-text-extraction':
+        return <PDFTextExtractionPrototype file={fileValue} />;
+      case 'document-viewer-annotation':
+        return <DocumentViewerAnnotationPrototype file={fileValue} />;
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-8">
-      {/* Left Column - Inputs & Controls */}
-      <div className="space-y-6">
+    <>
+      {/* Interactive Prototype */}
+      {showPrototype && (
+        <div className="mb-8">
+          {renderPrototype()}
+        </div>
+      )}
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Left Column - Inputs & Controls */}
+        <div className="space-y-6">
         {/* Inputs Section */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Inputs</h2>
@@ -239,5 +266,6 @@ export default function PatternSimulator({ pattern }: PatternSimulatorProps) {
         )}
       </div>
     </div>
+    </>
   );
 }
