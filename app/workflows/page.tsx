@@ -252,9 +252,12 @@ function WorkflowCard({ workflow }: { workflow: Workflow }) {
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          <button className="flex-1 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors">
+          <Link
+            href={`/workflows/${workflow.id}/demo`}
+            className="flex-1 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors text-center"
+          >
             Demo
-          </button>
+          </Link>
           <Link
             href={`/workflows/${workflow.id}`}
             className="flex-1 px-4 py-2 bg-white text-gray-900 text-sm font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-center"
