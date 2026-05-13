@@ -55,7 +55,7 @@ export default async function PatternDetailPage({ params }: { params: Promise<{ 
             {/* Tags */}
             <Section title="Tags">
               <div className="flex flex-wrap gap-2">
-                {pattern.tags.map((tag) => (
+                {pattern.tags.map((tag: string) => (
                   <span
                     key={tag}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium"
