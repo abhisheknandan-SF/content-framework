@@ -69,7 +69,7 @@ export default async function PatternDetailPage({ params }: { params: Promise<{ 
             {/* Inputs */}
             <Section title="Inputs">
               <div className="space-y-4">
-                {pattern.inputs.map((input) => (
+                {pattern.inputs.map((input: any) => (
                   <div key={input.id} className="p-4 bg-white border border-gray-200 rounded-lg">
                     <div className="flex items-start justify-between mb-2">
                       <h4 className="font-semibold text-gray-900">{input.name}</h4>
@@ -103,7 +103,7 @@ export default async function PatternDetailPage({ params }: { params: Promise<{ 
             {/* Outputs */}
             <Section title="Outputs">
               <div className="space-y-4">
-                {pattern.outputs.map((output) => (
+                {pattern.outputs.map((output: any) => (
                   <div key={output.id} className="p-4 bg-white border border-gray-200 rounded-lg">
                     <div className="flex items-start justify-between mb-2">
                       <h4 className="font-semibold text-gray-900">{output.name}</h4>
@@ -130,7 +130,7 @@ export default async function PatternDetailPage({ params }: { params: Promise<{ 
             {/* Workflow */}
             <Section title="Workflow Steps">
               <div className="space-y-3">
-                {pattern.workflow.map((step, index) => (
+                {pattern.workflow.map((step: any, index: number) => (
                   <div key={step.id} className="flex gap-4">
                     <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-sm">
                       {index + 1}
@@ -160,7 +160,7 @@ export default async function PatternDetailPage({ params }: { params: Promise<{ 
             {/* Code Examples */}
             <Section title="Code Examples">
               <div className="space-y-6">
-                {pattern.examples.map((example, index) => (
+                {pattern.examples.map((example: any, index: number) => (
                   <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="bg-gray-800 text-white px-4 py-2 flex items-center justify-between">
                       <span className="text-sm font-medium">{example.description}</span>
@@ -195,7 +195,7 @@ export default async function PatternDetailPage({ params }: { params: Promise<{ 
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="font-bold text-gray-900 mb-4">SLDS Components</h3>
               <div className="space-y-2">
-                {pattern.components.map((component) => (
+                {pattern.components.map((component: any) => (
                   <div key={component.id} className="text-sm">
                     <div className="font-medium text-gray-900">{component.type}</div>
                     <code className="text-xs text-blue-600">{component.tag}</code>
