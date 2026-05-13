@@ -10,7 +10,6 @@ export async function generatePrototype(config: PrototypeConfig): Promise<string
   const { text } = await generateText({
     model,
     prompt,
-    maxTokens: 4096,
   });
 
   return text;
@@ -22,7 +21,6 @@ export async function streamPrototypeGeneration(config: PrototypeConfig) {
   return streamText({
     model,
     prompt,
-    maxTokens: 4096,
   });
 }
 
@@ -82,7 +80,6 @@ Respond in JSON format:
   const { text } = await generateText({
     model,
     prompt,
-    maxTokens: 2048,
   });
 
   // Parse JSON from response
