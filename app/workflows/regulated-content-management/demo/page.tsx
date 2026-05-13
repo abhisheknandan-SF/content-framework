@@ -2,50 +2,52 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import './rcm-demo.css';
+import './rcm-styles.css';
 
 interface Annotation {
   id: string;
+  kind: 'highlight' | 'block';
   text: string;
+  snippet: string;
   author: string;
-  timestamp: Date;
-  status: 'open' | 'resolved';
+  timeAgo: string;
+  status: 'Pending' | 'Resolved';
   linkedClaim?: string;
+  isAnchor?: boolean;
   comments: Array<{
     id: string;
     text: string;
     author: string;
-    timestamp: Date;
+    timeAgo: string;
   }>;
 }
 
-export default function RCMWorkflowDemo() {
+export default function RCMDemo() {
   const documentRef = useRef<HTMLDivElement>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(400);
+  const [isDragging, setIsDragging] = useState(false);
   const [currentStage, setCurrentStage] = useState<'draft' | 'review' | 'approval' | 'published'>('review');
+  const [activeTab, setActiveTab] = useState<'annotations' | 'workitems' | 'assistant'>('annotations');
   const [annotations, setAnnotations] = useState<Annotation[]>([
     {
-      id: 'ann-1',
-      text: 'Cordim is indicated for the treatment of arterial hypertension...',
-      author: 'Dr. Sarah Chen',
-      timestamp: new Date('2026-05-10T10:30:00'),
-      status: 'open',
+      id: '001',
+      kind: 'highlight',
+      author: 'Brittany Smith',
+      timeAgo: '2h ago',
+      text: 'new outcome data showing how Immunexis is helping patients regain control faster',
+      snippet: '...new outcome data showing how Immunexis is helping patients regain control faster....',
+      status: 'Pending',
       linkedClaim: 'CLAIM-2024-001',
+      isAnchor: true,
       comments: [
-        {
-          id: 'c1',
-          text: 'This claim needs verification against clinical trial data',
-          author: 'Dr. Sarah Chen',
-          timestamp: new Date('2026-05-10T10:30:00'),
-        },
+        { id: 'c1', text: 'Verify against Phase III data', author: 'Dr. Chen', timeAgo: '1h ago' },
       ],
     },
   ]);
-  const [selectedAnnotation, setSelectedAnnotation] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'annotations' | 'workitems' | 'assistant'>('annotations');
+  const [expandedAnnotation, setExpandedAnnotation] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
-  const [showSelectionTooltip, setShowSelectionTooltip] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [selectedText, setSelectedText] = useState('');
+  const [showSelectionPopup, setShowSelectionPopup] = useState(false);
+  const [selectionData, setSelectionData] = useState({ text: '', x: 0, y: 0 });
 
   const stages = [
     { key: 'draft', label: 'Draft' },
@@ -54,22 +56,77 @@ export default function RCMWorkflowDemo() {
     { key: 'published', label: 'Published' },
   ];
 
-  const addComment = (annotationId: string) => {
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+    const newWidth = window.innerWidth - e.clientX;
+    if (newWidth >= 240 && newWidth <= 800) {
+      setSidebarWidth(newWidth);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove as any);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove as any);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging]);
+
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.toString().trim().length < 3) {
+      setShowSelectionPopup(false);
+      return;
+    }
+
+    const text = selection.toString().trim();
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    setSelectionData({
+      text,
+      x: rect.left + rect.width / 2,
+      y: rect.top + window.scrollY - 50,
+    });
+    setShowSelectionPopup(true);
+  };
+
+  const createAnnotation = () => {
+    const newAnn: Annotation = {
+      id: `ann-${Date.now()}`,
+      kind: 'highlight',
+      text: selectionData.text,
+      snippet: selectionData.text.substring(0, 80) + '...',
+      author: 'You',
+      timeAgo: 'just now',
+      status: 'Pending',
+      comments: [],
+    };
+
+    setAnnotations((prev) => [newAnn, ...prev]);
+    setExpandedAnnotation(newAnn.id);
+    setShowSelectionPopup(false);
+    window.getSelection()?.removeAllRanges();
+  };
+
+  const addComment = (annId: string) => {
     if (!newComment.trim()) return;
 
     setAnnotations((prev) =>
       prev.map((ann) =>
-        ann.id === annotationId
+        ann.id === annId
           ? {
               ...ann,
               comments: [
                 ...ann.comments,
-                {
-                  id: `c-${Date.now()}`,
-                  text: newComment,
-                  author: 'Current User',
-                  timestamp: new Date(),
-                },
+                { id: `c-${Date.now()}`, text: newComment, author: 'You', timeAgo: 'just now' },
               ],
             }
           : ann
@@ -78,431 +135,263 @@ export default function RCMWorkflowDemo() {
     setNewComment('');
   };
 
-  const toggleAnnotationStatus = (annotationId: string) => {
+  const toggleStatus = (annId: string) => {
     setAnnotations((prev) =>
       prev.map((ann) =>
-        ann.id === annotationId ? { ...ann, status: ann.status === 'open' ? 'resolved' : 'open' } : ann
+        ann.id === annId ? { ...ann, status: ann.status === 'Pending' ? 'Resolved' : 'Pending' } : ann
       )
     );
   };
 
-  const handleTextSelection = () => {
-    const selection = window.getSelection();
-    if (!selection || selection.toString().trim().length === 0) {
-      setShowSelectionTooltip(false);
-      return;
-    }
-
-    const text = selection.toString().trim();
-    if (text.length < 3) return; // Minimum 3 characters
-
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-
-    setSelectedText(text);
-    setTooltipPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.top + window.scrollY - 10,
-    });
-    setShowSelectionTooltip(true);
-  };
-
-  const createAnnotation = () => {
-    if (!selectedText) return;
-
-    const newAnnotation: Annotation = {
-      id: `ann-${Date.now()}`,
-      text: selectedText,
-      author: 'Current User',
-      timestamp: new Date(),
-      status: 'open',
-      comments: [],
-    };
-
-    setAnnotations((prev) => [...prev, newAnnotation]);
-    setShowSelectionTooltip(false);
-    setSelectedText('');
-    setSelectedAnnotation(newAnnotation.id);
-
-    // Clear selection
-    window.getSelection()?.removeAllRanges();
-  };
-
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (!window.getSelection()?.toString()) {
-        setShowSelectionTooltip(false);
-      }
-    };
-
-    document.addEventListener('mouseup', handleTextSelection);
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      document.removeEventListener('mouseup', handleTextSelection);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const getStageClass = (stageKey: string, index: number) => {
-    const currentIndex = stages.findIndex((s) => s.key === currentStage);
-    if (stageKey === currentStage) return 'slds-path__stage slds-is-current';
-    if (index < currentIndex) return 'slds-path__stage slds-is-complete';
-    return 'slds-path__stage slds-is-incomplete';
-  };
-
   return (
-    <div className="slds-scope" style={{ minHeight: '100vh', background: '#f3f2f2' }}>
-      {/* Selection Tooltip */}
-      {showSelectionTooltip && (
+    <div className="rcm-app">
+      {/* Selection Popup */}
+      {showSelectionPopup && (
         <div
-          className="rcm-selection-tooltip"
-          style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}
+          className="rcm-selection-popup"
+          style={{ left: `${selectionData.x}px`, top: `${selectionData.y}px` }}
           onClick={createAnnotation}
         >
-          + Add Annotation
+          + Create Annotation
         </div>
       )}
 
-      {/* SLDS Page Header */}
-      <div className="slds-page-header">
-        <Link href="/workflows" className="slds-text-link" style={{ display: 'block', marginBottom: '1rem' }}>
+      {/* Page Header */}
+      <div className="rcm-page-header">
+        <Link href="/workflows" className="rcm-back-link">
           ← Back to Workflows
         </Link>
-
-        {/* Header Row 1: Icon + Title + Actions */}
-        <div className="slds-page-header__row">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{
-              width: '3rem',
-              height: '3rem',
-              background: '#0176d3',
-              borderRadius: '0.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-            }}>
-              <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+        <div className="rcm-header-row">
+          <div className="rcm-header-main">
+            <div className="rcm-header-icon">
+              <svg width="20" height="20" fill="#0176d3" viewBox="0 0 24 24">
                 <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
               </svg>
             </div>
-            <div>
-              <p style={{ fontSize: '0.75rem', color: '#706e6b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                Regulated Content
-              </p>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#3e3e3c', margin: 0 }}>
-                Cordim Product Label - US Market
-              </h1>
+            <div className="rcm-header-titles">
+              <div className="rcm-eyebrow">Regulated Content</div>
+              <h1 className="rcm-title">Cordim Product Label - US Market</h1>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="slds-button slds-button_neutral">Follow</button>
-            <button className="slds-button slds-button_neutral">Edit</button>
-            <button className="slds-button slds-button_neutral">Delete</button>
+          <div className="rcm-header-actions">
+            <button className="rcm-btn rcm-btn-outline">Follow</button>
+            <button className="rcm-btn rcm-btn-outline">Edit</button>
+            <button className="rcm-btn rcm-btn-outline">Delete</button>
           </div>
         </div>
 
-        {/* Header Row 2: Detail Fields */}
-        <ul className="slds-page-header__detail-row">
-          <li className="slds-page-header__detail-block">
-            <label>Content Type</label>
-            <div>Product Label</div>
-          </li>
-          <li className="slds-page-header__detail-block">
-            <label>Type</label>
-            <div>PDF</div>
-          </li>
-          <li className="slds-page-header__detail-block">
-            <label>Version</label>
-            <div>2.1</div>
-          </li>
-          <li className="slds-page-header__detail-block">
-            <label>Status</label>
-            <div>In Review</div>
-          </li>
-          <li className="slds-page-header__detail-block">
-            <label>Effective Dates</label>
-            <div>Q2 2026</div>
-          </li>
-        </ul>
-
-        {/* Path (Workflow Stages) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
-          <div style={{ display: 'flex', flex: 1 }}>
-            {stages.map((stage, index) => (
-              <button
-                key={stage.key}
-                className={getStageClass(stage.key, index)}
-                onClick={() => setCurrentStage(stage.key as typeof currentStage)}
-                style={{ flex: 1 }}
-              >
-                {stage.label}
-              </button>
-            ))}
+        {/* Detail Panel */}
+        <div className="rcm-highlight-panel">
+          <div className="rcm-field">
+            <span className="rcm-label">Content Type</span>
+            <span className="rcm-value">Product Label</span>
           </div>
-          <button className="slds-button slds-button_brand">
-            ✨ Extract &amp; Match Claims
-          </button>
+          <div className="rcm-field">
+            <span className="rcm-label">Type</span>
+            <span className="rcm-value">PDF</span>
+          </div>
+          <div className="rcm-field">
+            <span className="rcm-label">Version</span>
+            <span className="rcm-value">2.1</span>
+          </div>
+          <div className="rcm-field">
+            <span className="rcm-label">Status</span>
+            <span className="rcm-value">In Review</span>
+          </div>
+          <div className="rcm-field">
+            <span className="rcm-label">Effective Dates</span>
+            <span className="rcm-value">Q2 2026</span>
+          </div>
+        </div>
+
+        {/* Path */}
+        <div className="rcm-path-actions">
+          <div className="rcm-path-rail">
+            {stages.map((stage, idx) => {
+              const currentIdx = stages.findIndex((s) => s.key === currentStage);
+              const isComplete = idx < currentIdx;
+              const isCurrent = stage.key === currentStage;
+              return (
+                <button
+                  key={stage.key}
+                  className={`rcm-path-stage ${isComplete ? 'complete' : ''} ${isCurrent ? 'current' : ''}`}
+                  onClick={() => setCurrentStage(stage.key as typeof currentStage)}
+                >
+                  {stage.label}
+                </button>
+              );
+            })}
+          </div>
+          <button className="rcm-btn rcm-btn-brand">✨ Extract & Match Claims</button>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div style={{ display: 'flex', height: 'calc(100vh - 300px)' }}>
+      {/* Main Content */}
+      <div className="rcm-main-content">
         {/* Document Viewer */}
-        <div style={{ flex: 1, padding: '1rem', overflow: 'auto' }}>
-          <div className="slds-card" style={{ height: '100%' }}>
-            <div className="slds-card__header">
-              <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Document Viewer</h2>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="slds-button" title="Zoom out">−</button>
-                <button className="slds-button" title="Zoom in">+</button>
-                <span style={{ fontSize: '0.875rem', color: '#706e6b', padding: '0.5rem' }}>Page 1 of 5</span>
-              </div>
+        <div className="rcm-viewer-container" style={{ width: `calc(100% - ${sidebarWidth}px)` }}>
+          <div className="rcm-viewer-toolbar">
+            <span className="rcm-toolbar-title">Document Viewer</span>
+            <div className="rcm-toolbar-controls">
+              <button className="rcm-icon-btn">−</button>
+              <button className="rcm-icon-btn">+</button>
+              <span className="rcm-page-indicator">Page 1 of 5</span>
             </div>
-            <div className="slds-card__body">
-              <div
-                ref={documentRef}
-                className="rcm-document-content"
-                style={{
-                  maxWidth: '48rem',
-                  margin: '0 auto',
-                  padding: '2rem',
-                  background: 'white',
-                  border: '1px solid #dddbda',
-                  borderRadius: '0.25rem',
-                  minHeight: '800px',
-                }}
-              >
-                <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>
-                  CORDIM® (Medication Name)
-                </h1>
+          </div>
+          <div className="rcm-document-scroll">
+            <div
+              ref={documentRef}
+              className="rcm-document-content"
+              onMouseUp={handleTextSelection}
+            >
+              <h1 className="doc-title">CORDIM® (Cordimetrix Hydrochloride)</h1>
 
-                <div style={{ marginBottom: '2rem' }}>
-                  <h2 style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 600,
-                    marginBottom: '1rem',
-                    borderBottom: '2px solid #dddbda',
-                    paddingBottom: '0.5rem',
-                  }}>
-                    INDICATIONS AND USAGE
-                  </h2>
-                  <p style={{ lineHeight: 1.8, color: '#3e3e3c' }}>
-                    Cordim is indicated for the treatment of arterial hypertension in adults to lower blood pressure.
-                    Lowering blood pressure reduces the risk of fatal and nonfatal cardiovascular events, primarily
-                    strokes and myocardial infarctions. Patients should be monitored regularly during treatment.
-                  </p>
-                </div>
+              <section className="doc-section">
+                <h2 className="doc-heading">INDICATIONS AND USAGE</h2>
+                <p className="doc-paragraph">
+                  Cordim is indicated for the treatment of arterial hypertension in adults to lower blood pressure.
+                  Lowering blood pressure reduces the risk of fatal and nonfatal cardiovascular events, primarily
+                  strokes and myocardial infarctions. These benefits have been demonstrated in controlled trials of
+                  antihypertensive drugs from various pharmacologic classes.
+                </p>
+              </section>
 
-                <div style={{ marginBottom: '2rem' }}>
-                  <h2 style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 600,
-                    marginBottom: '1rem',
-                    borderBottom: '2px solid #dddbda',
-                    paddingBottom: '0.5rem',
-                  }}>
-                    DOSAGE AND ADMINISTRATION
-                  </h2>
-                  <p style={{ lineHeight: 1.8, color: '#3e3e3c', marginBottom: '1rem' }}>
-                    The recommended starting dose of Cordim is 5 mg once daily. Depending on the patient's response,
-                    the dose may be increased to a maximum of 10 mg once daily. Dose adjustments should be made based
-                    on clinical response and patient tolerability.
-                  </p>
-                  <ul style={{ listStyle: 'disc', marginLeft: '2rem', lineHeight: 1.8, color: '#3e3e3c' }}>
-                    <li>Initial dose: 5 mg once daily</li>
-                    <li>Maximum dose: 10 mg once daily</li>
-                    <li>Adjust dose based on patient response and tolerability</li>
-                    <li>May be taken with or without food</li>
-                  </ul>
-                </div>
+              <section className="doc-section">
+                <h2 className="doc-heading">DOSAGE AND ADMINISTRATION</h2>
+                <p className="doc-paragraph">
+                  The recommended starting dose is 5 mg once daily. Depending on the patient's response, the dose may
+                  be increased to a maximum of 10 mg once daily. Dose adjustments should be made at intervals of at
+                  least 2 weeks based on clinical response and tolerability.
+                </p>
+                <ul className="doc-list">
+                  <li>Initial dose: 5 mg once daily</li>
+                  <li>Maximum dose: 10 mg once daily</li>
+                  <li>May be taken with or without food</li>
+                  <li>Dosage adjustments in special populations may be required</li>
+                </ul>
+              </section>
 
-                <div style={{ marginBottom: '2rem' }}>
-                  <h2 style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 600,
-                    marginBottom: '1rem',
-                    borderBottom: '2px solid #dddbda',
-                    paddingBottom: '0.5rem',
-                  }}>
-                    CLINICAL PHARMACOLOGY
-                  </h2>
-                  <p style={{ lineHeight: 1.8, color: '#3e3e3c' }}>
-                    Clinical efficacy demonstrated in Phase III trials with 1,200+ patients. Cordim showed significant
-                    blood pressure reduction compared to placebo (p &lt; 0.001). The antihypertensive effect was
-                    sustained over 24 hours with once-daily dosing. Mechanism of action involves selective inhibition
-                    of calcium channels in vascular smooth muscle.
-                  </p>
-                </div>
+              <section className="doc-section">
+                <h2 className="doc-heading">CLINICAL PHARMACOLOGY</h2>
+                <p className="doc-paragraph">
+                  Clinical efficacy was demonstrated in Phase III trials involving over 1,200 patients. Cordim showed
+                  statistically significant blood pressure reduction compared to placebo (p &lt; 0.001). The
+                  antihypertensive effect was sustained over 24 hours with once-daily dosing, providing consistent
+                  blood pressure control throughout the dosing interval.
+                </p>
+              </section>
 
-                <div style={{
-                  padding: '1rem',
-                  background: '#d8edff',
-                  border: '1px solid #0176d3',
-                  borderRadius: '0.25rem',
-                  marginTop: '2rem',
-                }}>
-                  <p style={{ fontSize: '0.875rem', color: '#014486', margin: 0 }}>
-                    💡 <strong>Demo Tip:</strong> Select any text in this document to create an annotation.
-                    Try highlighting different sections to see how annotations work!
-                  </p>
-                </div>
+              <div className="doc-info-box">
+                <p>
+                  💡 <strong>Demo Tip:</strong> Select any text in this document to create annotations. Try
+                  highlighting different sections to see the annotation workflow in action!
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Annotations Panel */}
-        <div style={{ width: '24rem', borderLeft: '1px solid #dddbda', background: 'white', display: 'flex', flexDirection: 'column' }}>
+        {/* Resizer */}
+        <div
+          className="rcm-splitter"
+          onMouseDown={() => setIsDragging(true)}
+        />
+
+        {/* Annotation Panel */}
+        <div className="rcm-sidebar" style={{ width: `${sidebarWidth}px` }}>
           {/* Tabs */}
-          <div className="slds-tabs_scoped">
-            <ul className="slds-tabs_scoped__nav" role="tablist">
-              <li className={`slds-tabs_scoped__item ${activeTab === 'annotations' ? 'slds-is-active' : ''}`} role="presentation">
-                <a
-                  className="slds-tabs_scoped__link"
-                  role="tab"
-                  onClick={() => setActiveTab('annotations')}
-                >
-                  Annotations ({annotations.length})
-                </a>
-              </li>
-              <li className={`slds-tabs_scoped__item ${activeTab === 'workitems' ? 'slds-is-active' : ''}`} role="presentation">
-                <a
-                  className="slds-tabs_scoped__link"
-                  role="tab"
-                  onClick={() => setActiveTab('workitems')}
-                >
-                  Work Items
-                </a>
-              </li>
-              <li className={`slds-tabs_scoped__item ${activeTab === 'assistant' ? 'slds-is-active' : ''}`} role="presentation">
-                <a
-                  className="slds-tabs_scoped__link"
-                  role="tab"
-                  onClick={() => setActiveTab('assistant')}
-                >
-                  AI Assistant
-                </a>
-              </li>
-            </ul>
+          <div className="rcm-tabs">
+            <button
+              className={`rcm-tab ${activeTab === 'annotations' ? 'active' : ''}`}
+              onClick={() => setActiveTab('annotations')}
+            >
+              Annotations ({annotations.length})
+            </button>
+            <button
+              className={`rcm-tab ${activeTab === 'workitems' ? 'active' : ''}`}
+              onClick={() => setActiveTab('workitems')}
+            >
+              Work Items
+            </button>
+            <button
+              className={`rcm-tab ${activeTab === 'assistant' ? 'active' : ''}`}
+              onClick={() => setActiveTab('assistant')}
+            >
+              Content Assistant
+            </button>
           </div>
 
           {/* Tab Content */}
-          <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+          <div className="rcm-tab-content">
             {activeTab === 'annotations' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div className="rcm-annotations-list">
                 {annotations.map((ann) => (
-                  <div key={ann.id} className="slds-card" style={{ borderColor: selectedAnnotation === ann.id ? '#0176d3' : '#dddbda' }}>
-                    <div style={{ padding: '0.75rem', background: '#f3f2f2' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span className={`slds-badge ${ann.status === 'open' ? 'slds-badge_warning' : 'slds-badge_success'}`}>
+                  <div key={ann.id} className="rcm-annotation-card">
+                    <div className="rcm-ann-header">
+                      <div className="rcm-ann-meta">
+                        <span className={`rcm-status-badge ${ann.status === 'Pending' ? 'pending' : 'resolved'}`}>
                           {ann.status}
                         </span>
-                        {ann.linkedClaim && (
-                          <span style={{ fontSize: '0.75rem', color: '#0176d3', fontWeight: 600 }}>
-                            {ann.linkedClaim}
-                          </span>
-                        )}
+                        {ann.isAnchor && <span className="rcm-anchor-badge">⚓</span>}
+                        {ann.linkedClaim && <span className="rcm-claim-link">{ann.linkedClaim}</span>}
                       </div>
-                      <p style={{ fontSize: '0.875rem', color: '#3e3e3c', fontStyle: 'italic', marginBottom: '0.5rem' }}>
-                        &quot;{ann.text.substring(0, 80)}...&quot;
-                      </p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#706e6b' }}>
-                        <span>{ann.author}</span>
-                        <span>{ann.timestamp.toLocaleDateString()}</span>
-                      </div>
+                      <button className="rcm-expand-btn" onClick={() => setExpandedAnnotation(expandedAnnotation === ann.id ? null : ann.id)}>
+                        {expandedAnnotation === ann.id ? '−' : '+'}
+                      </button>
+                    </div>
+                    <p className="rcm-ann-snippet">"{ann.snippet}"</p>
+                    <div className="rcm-ann-footer">
+                      <span className="rcm-ann-author">{ann.author}</span>
+                      <span className="rcm-ann-time">{ann.timeAgo}</span>
                     </div>
 
-                    {selectedAnnotation === ann.id ? (
-                      <div style={{ padding: '0.75rem', borderTop: '1px solid #dddbda' }}>
-                        <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {expandedAnnotation === ann.id && (
+                      <div className="rcm-ann-details">
+                        <div className="rcm-comments">
                           {ann.comments.map((comment) => (
-                            <div key={comment.id} style={{ padding: '0.5rem', background: '#d8edff', borderRadius: '0.25rem' }}>
-                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#014486', marginBottom: '0.25rem' }}>
-                                {comment.author}
+                            <div key={comment.id} className="rcm-comment">
+                              <div className="rcm-comment-header">
+                                <strong>{comment.author}</strong>
+                                <span className="rcm-comment-time">{comment.timeAgo}</span>
                               </div>
-                              <div style={{ fontSize: '0.875rem', color: '#3e3e3c' }}>{comment.text}</div>
-                              <div style={{ fontSize: '0.625rem', color: '#706e6b', marginTop: '0.25rem' }}>
-                                {comment.timestamp.toLocaleString()}
-                              </div>
+                              <p className="rcm-comment-text">{comment.text}</p>
                             </div>
                           ))}
                         </div>
-
                         <textarea
+                          className="rcm-comment-input"
+                          placeholder="Add a comment..."
                           value={newComment}
                           onChange={(e) => setNewComment(e.target.value)}
-                          placeholder="Add a comment..."
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #dddbda',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.875rem',
-                            resize: 'none',
-                            marginBottom: '0.5rem',
-                          }}
                           rows={3}
                         />
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button
-                            onClick={() => addComment(ann.id)}
-                            className="slds-button slds-button_brand"
-                            style={{ flex: 1 }}
-                          >
+                        <div className="rcm-ann-actions">
+                          <button className="rcm-btn rcm-btn-brand rcm-btn-sm" onClick={() => addComment(ann.id)}>
                             Add Comment
                           </button>
-                          <button
-                            onClick={() => toggleAnnotationStatus(ann.id)}
-                            className="slds-button slds-button_neutral"
-                          >
-                            {ann.status === 'open' ? 'Resolve' : 'Reopen'}
+                          <button className="rcm-btn rcm-btn-outline rcm-btn-sm" onClick={() => toggleStatus(ann.id)}>
+                            Mark {ann.status === 'Pending' ? 'Resolved' : 'Pending'}
                           </button>
                         </div>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => setSelectedAnnotation(ann.id)}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#0176d3',
-                          fontSize: '0.875rem',
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          borderTop: '1px solid #dddbda',
-                        }}
-                      >
-                        View {ann.comments.length} comment{ann.comments.length !== 1 ? 's' : ''}
-                      </button>
                     )}
                   </div>
                 ))}
-
-                {annotations.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#706e6b' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💬</div>
-                    <p style={{ fontSize: '0.875rem' }}>No annotations yet</p>
-                    <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Select text to create your first annotation</p>
-                  </div>
-                )}
               </div>
             )}
 
             {activeTab === 'workitems' && (
-              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#706e6b' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
-                <p style={{ fontSize: '0.875rem' }}>No work items assigned</p>
+              <div className="rcm-empty-state">
+                <div className="rcm-empty-icon">📋</div>
+                <p>No work items assigned</p>
               </div>
             )}
 
             {activeTab === 'assistant' && (
-              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#706e6b' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🤖</div>
-                <p style={{ fontSize: '0.875rem' }}>AI Assistant coming soon</p>
+              <div className="rcm-empty-state">
+                <div className="rcm-empty-icon">🤖</div>
+                <p>Content Assistant</p>
+                <p className="rcm-empty-subtitle">AI-powered content analysis coming soon</p>
               </div>
             )}
           </div>
