@@ -164,6 +164,18 @@ export default function RCMExactDemo() {
 
   return (
     <div className="rcm-exact-app">
+      {/* Demo Instructions Banner */}
+      <div style={{
+        background: '#d8edff',
+        borderBottom: '2px solid #0176d3',
+        padding: '1rem',
+        textAlign: 'center',
+      }}>
+        <p style={{ margin: 0, fontSize: '0.875rem', color: '#014486' }}>
+          <strong>🎯 Demo Instructions:</strong> Click "Annotate" button below → Click the highlight tool (pencil icon) → Select any text in the document to create an annotation
+        </p>
+      </div>
+
       {/* Page Header */}
       <div className="rcm-page-header-shell">
         <Link href="/workflows" className="rcm-back-link">
@@ -344,9 +356,25 @@ export default function RCMExactDemo() {
             <div className="rcm-document-preview">
               <div
                 ref={documentRef}
-                className="rcm-document-content"
+                className={`rcm-document-content ${annotateMode && annotateToolMode === 'highlight' ? 'annotate-active' : ''}`}
                 onMouseUp={handleTextSelection}
               >
+                {annotateMode && annotateToolMode === 'highlight' && (
+                  <div style={{
+                    padding: '1rem',
+                    background: '#fff3cd',
+                    border: '2px solid #ffc107',
+                    borderRadius: '0.25rem',
+                    marginBottom: '1.5rem',
+                    textAlign: 'center',
+                  }}>
+                    <strong style={{ color: '#856404' }}>✨ Annotation Mode Active!</strong>
+                    <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem', color: '#856404' }}>
+                      Select any text below to create an annotation
+                    </p>
+                  </div>
+                )}
+
                 <h1 className="doc-title">CORDIM® (Cordimetrix Hydrochloride)</h1>
 
                 <section className="doc-section">

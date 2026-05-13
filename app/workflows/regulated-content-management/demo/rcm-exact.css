@@ -393,6 +393,16 @@
   margin: 0;
 }
 
+/* Active annotation mode indicator */
+.rcm-document-content.annotate-active {
+  cursor: crosshair;
+  box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.3);
+}
+
+.rcm-document-content.annotate-active::selection {
+  background-color: #ffd966;
+}
+
 /* Splitter */
 .rcm-splitter {
   width: 8px;
