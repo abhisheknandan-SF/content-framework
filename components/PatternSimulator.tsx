@@ -61,9 +61,9 @@ export default function PatternSimulator({ pattern }: PatternSimulatorProps) {
           timestamp: new Date().toISOString(),
           schema: output.schema || {},
         };
-      } else if (output.type === 'text') {
+      } else if ((output as any).type === 'text') {
         mockOutputs[output.id] = `Sample ${output.name}:\n\nThis is simulated output for demonstration purposes.`;
-      } else if (output.type === 'array') {
+      } else if ((output as any).type === 'array') {
         mockOutputs[output.id] = [
           { id: 1, sample: 'First item' },
           { id: 2, sample: 'Second item' },
