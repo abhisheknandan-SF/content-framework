@@ -206,7 +206,7 @@ export default function WorkflowsPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredWorkflows.map((workflow) => (
               <WorkflowCard key={workflow.id} workflow={workflow} />
             ))}
@@ -219,79 +219,48 @@ export default function WorkflowsPage() {
 
 function WorkflowCard({ workflow }: { workflow: Workflow }) {
   const statusColors = {
-    stable: 'bg-green-100 text-green-700 border-green-200',
-    beta: 'bg-blue-100 text-blue-700 border-blue-200',
-    experimental: 'bg-orange-100 text-orange-700 border-orange-200',
+    stable: 'bg-green-100 text-green-700',
+    beta: 'bg-blue-100 text-blue-700',
+    experimental: 'bg-orange-100 text-orange-700',
   };
 
   return (
-    <div className="bg-white rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all group">
+    <div className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all group overflow-hidden">
+      {/* Colored accent bar */}
+      <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
+
       <div className="p-6">
-        {/* Header */}
-        <div className="flex items-start gap-4 mb-4">
-          <div className="text-5xl">{workflow.thumbnail}</div>
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                {workflow.title}
-              </h3>
-              <span
-                className={`px-3 py-1 text-xs font-semibold rounded-full border ${
-                  statusColors[workflow.status]
-                }`}
-              >
+        {/* Header with icon and title */}
+        <div className="flex items-center gap-4 mb-3">
+          <div className="text-4xl">{workflow.thumbnail}</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-bold text-gray-900 mb-1 truncate group-hover:text-blue-600 transition-colors">
+              {workflow.title}
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">{workflow.industry}</span>
+              <span className="text-xs text-gray-300">•</span>
+              <span className={`px-2 py-0.5 text-xs font-semibold rounded ${statusColors[workflow.status]}`}>
                 {workflow.status}
               </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-              <span className="px-2 py-1 bg-gray-100 rounded">{workflow.industry}</span>
-              <span className="px-2 py-1 bg-gray-100 rounded">{workflow.type}</span>
             </div>
           </div>
         </div>
 
         {/* Description */}
-        <p className="text-gray-700 mb-4 leading-relaxed">{workflow.description}</p>
+        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{workflow.description}</p>
 
-        {/* Use Cases */}
-        <div className="mb-4">
-          <h4 className="text-sm font-semibold text-gray-900 mb-2">Use Cases:</h4>
-          <ul className="space-y-1">
-            {workflow.useCases.slice(0, 3).map((useCase, index) => (
-              <li key={index} className="text-sm text-gray-600 flex items-start gap-2">
-                <span className="text-blue-600 mt-0.5">•</span>
-                <span>{useCase}</span>
-              </li>
-            ))}
-            {workflow.useCases.length > 3 && (
-              <li className="text-sm text-gray-500 italic">+{workflow.useCases.length - 3} more</li>
-            )}
-          </ul>
-        </div>
-
-        {/* Patterns */}
-        <div className="mb-4">
-          <h4 className="text-sm font-semibold text-gray-900 mb-2">Includes {workflow.patterns.length} patterns:</h4>
-          <div className="flex flex-wrap gap-2">
-            {workflow.patterns.map((pattern) => (
-              <span key={pattern} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded">
-                {pattern}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <button className="flex-1 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors">
+            Demo
+          </button>
           <Link
             href={`/workflows/${workflow.id}`}
-            className="flex-1 px-4 py-2 bg-gray-900 text-white text-center font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex-1 px-4 py-2 bg-white text-gray-900 text-sm font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-center"
           >
             View Details
           </Link>
-          <button className="px-4 py-2 bg-blue-50 text-blue-700 font-semibold rounded-lg hover:bg-blue-100 transition-colors">
-            Try Demo
-          </button>
         </div>
       </div>
     </div>
