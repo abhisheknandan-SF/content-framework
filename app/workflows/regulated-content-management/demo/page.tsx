@@ -1,14 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import './rcm-demo.css';
 
 interface Annotation {
   id: string;
-  type: 'highlight' | 'comment';
   text: string;
-  pageNumber: number;
-  position: { x: number; y: number };
   author: string;
   timestamp: Date;
   status: 'open' | 'resolved';
@@ -22,14 +20,12 @@ interface Annotation {
 }
 
 export default function RCMWorkflowDemo() {
+  const documentRef = useRef<HTMLDivElement>(null);
   const [currentStage, setCurrentStage] = useState<'draft' | 'review' | 'approval' | 'published'>('review');
   const [annotations, setAnnotations] = useState<Annotation[]>([
     {
       id: 'ann-1',
-      type: 'highlight',
       text: 'Cordim is indicated for the treatment of arterial hypertension...',
-      pageNumber: 1,
-      position: { x: 100, y: 200 },
       author: 'Dr. Sarah Chen',
       timestamp: new Date('2026-05-10T10:30:00'),
       status: 'open',
@@ -43,29 +39,13 @@ export default function RCMWorkflowDemo() {
         },
       ],
     },
-    {
-      id: 'ann-2',
-      type: 'comment',
-      text: 'Clinical efficacy demonstrated in Phase III trials...',
-      pageNumber: 2,
-      position: { x: 150, y: 350 },
-      author: 'John Martinez',
-      timestamp: new Date('2026-05-11T14:15:00'),
-      status: 'resolved',
-      linkedClaim: 'CLAIM-2024-002',
-      comments: [
-        {
-          id: 'c2',
-          text: 'Approved - reference documentation attached',
-          author: 'Dr. Emily Wilson',
-          timestamp: new Date('2026-05-12T09:00:00'),
-        },
-      ],
-    },
   ]);
   const [selectedAnnotation, setSelectedAnnotation] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'annotations' | 'workitems' | 'assistant'>('annotations');
   const [newComment, setNewComment] = useState('');
+  const [showSelectionTooltip, setShowSelectionTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [selectedText, setSelectedText] = useState('');
 
   const stages = [
     { key: 'draft', label: 'Draft' },
@@ -106,176 +86,266 @@ export default function RCMWorkflowDemo() {
     );
   };
 
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.toString().trim().length === 0) {
+      setShowSelectionTooltip(false);
+      return;
+    }
+
+    const text = selection.toString().trim();
+    if (text.length < 3) return; // Minimum 3 characters
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    setSelectedText(text);
+    setTooltipPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.top + window.scrollY - 10,
+    });
+    setShowSelectionTooltip(true);
+  };
+
+  const createAnnotation = () => {
+    if (!selectedText) return;
+
+    const newAnnotation: Annotation = {
+      id: `ann-${Date.now()}`,
+      text: selectedText,
+      author: 'Current User',
+      timestamp: new Date(),
+      status: 'open',
+      comments: [],
+    };
+
+    setAnnotations((prev) => [...prev, newAnnotation]);
+    setShowSelectionTooltip(false);
+    setSelectedText('');
+    setSelectedAnnotation(newAnnotation.id);
+
+    // Clear selection
+    window.getSelection()?.removeAllRanges();
+  };
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (!window.getSelection()?.toString()) {
+        setShowSelectionTooltip(false);
+      }
+    };
+
+    document.addEventListener('mouseup', handleTextSelection);
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mouseup', handleTextSelection);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const getStageClass = (stageKey: string, index: number) => {
+    const currentIndex = stages.findIndex((s) => s.key === currentStage);
+    if (stageKey === currentStage) return 'slds-path__stage slds-is-current';
+    if (index < currentIndex) return 'slds-path__stage slds-is-complete';
+    return 'slds-path__stage slds-is-incomplete';
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* SLDS Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-6 py-4">
-          <Link href="/workflows" className="text-sm text-blue-600 hover:text-blue-800 mb-2 inline-block">
-            ← Back to Workflows
-          </Link>
+    <div className="slds-scope" style={{ minHeight: '100vh', background: '#f3f2f2' }}>
+      {/* Selection Tooltip */}
+      {showSelectionTooltip && (
+        <div
+          className="rcm-selection-tooltip"
+          style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}
+          onClick={createAnnotation}
+        >
+          + Add Annotation
+        </div>
+      )}
 
-          {/* Record Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-blue-600 rounded flex items-center justify-center text-white">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Regulated Content</p>
-                <h1 className="text-2xl font-bold text-gray-900">Cordim Product Label - US Market</h1>
-              </div>
+      {/* SLDS Page Header */}
+      <div className="slds-page-header">
+        <Link href="/workflows" className="slds-text-link" style={{ display: 'block', marginBottom: '1rem' }}>
+          ← Back to Workflows
+        </Link>
+
+        {/* Header Row 1: Icon + Title + Actions */}
+        <div className="slds-page-header__row">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{
+              width: '3rem',
+              height: '3rem',
+              background: '#0176d3',
+              borderRadius: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+            }}>
+              <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
+              </svg>
             </div>
-            <div className="flex gap-2">
-              <button className="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-medium hover:bg-gray-50">
-                Follow
-              </button>
-              <button className="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-medium hover:bg-gray-50">
-                Edit
-              </button>
-              <button className="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-medium hover:bg-gray-50">
-                Delete
-              </button>
+            <div>
+              <p style={{ fontSize: '0.75rem', color: '#706e6b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                Regulated Content
+              </p>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#3e3e3c', margin: 0 }}>
+                Cordim Product Label - US Market
+              </h1>
             </div>
           </div>
-
-          {/* Highlight Panel */}
-          <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg mb-4">
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Content Type</p>
-              <p className="text-sm font-semibold text-gray-900">Product Label</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Type</p>
-              <p className="text-sm font-semibold text-gray-900">PDF</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Version</p>
-              <p className="text-sm font-semibold text-gray-900">2.1</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Status</p>
-              <p className="text-sm font-semibold text-gray-900">In Review</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 mb-1">Effective Dates</p>
-              <p className="text-sm font-semibold text-gray-900">Q2 2026</p>
-            </div>
-          </div>
-
-          {/* Path (Workflow Stages) */}
-          <div className="flex items-center justify-between">
-            <div className="flex-1 flex items-center gap-1">
-              {stages.map((stage, index) => (
-                <div key={stage.key} className="flex items-center flex-1">
-                  <button
-                    onClick={() => setCurrentStage(stage.key as typeof currentStage)}
-                    className={`relative flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-                      currentStage === stage.key
-                        ? 'bg-blue-600 text-white'
-                        : index < stages.findIndex((s) => s.key === currentStage)
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                    style={{
-                      clipPath:
-                        index === 0
-                          ? 'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)'
-                          : index === stages.length - 1
-                          ? 'polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%)'
-                          : 'polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%)',
-                    }}
-                  >
-                    {stage.label}
-                  </button>
-                  {index < stages.length - 1 && <div className="w-1" />}
-                </div>
-              ))}
-            </div>
-            <button className="ml-4 px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 flex items-center gap-2">
-              <span>✨</span>
-              Extract &amp; Match Claims
-            </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="slds-button slds-button_neutral">Follow</button>
+            <button className="slds-button slds-button_neutral">Edit</button>
+            <button className="slds-button slds-button_neutral">Delete</button>
           </div>
         </div>
-      </header>
+
+        {/* Header Row 2: Detail Fields */}
+        <ul className="slds-page-header__detail-row">
+          <li className="slds-page-header__detail-block">
+            <label>Content Type</label>
+            <div>Product Label</div>
+          </li>
+          <li className="slds-page-header__detail-block">
+            <label>Type</label>
+            <div>PDF</div>
+          </li>
+          <li className="slds-page-header__detail-block">
+            <label>Version</label>
+            <div>2.1</div>
+          </li>
+          <li className="slds-page-header__detail-block">
+            <label>Status</label>
+            <div>In Review</div>
+          </li>
+          <li className="slds-page-header__detail-block">
+            <label>Effective Dates</label>
+            <div>Q2 2026</div>
+          </li>
+        </ul>
+
+        {/* Path (Workflow Stages) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', flex: 1 }}>
+            {stages.map((stage, index) => (
+              <button
+                key={stage.key}
+                className={getStageClass(stage.key, index)}
+                onClick={() => setCurrentStage(stage.key as typeof currentStage)}
+                style={{ flex: 1 }}
+              >
+                {stage.label}
+              </button>
+            ))}
+          </div>
+          <button className="slds-button slds-button_brand">
+            ✨ Extract &amp; Match Claims
+          </button>
+        </div>
+      </div>
 
       {/* Main Content Area */}
-      <main className="flex" style={{ height: 'calc(100vh - 280px)' }}>
-        {/* PDF Viewer */}
-        <div className="flex-1 p-4 overflow-auto">
-          <div className="bg-white rounded-lg shadow-lg h-full p-6">
-            <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
-              <h2 className="text-lg font-semibold text-gray-900">Document Viewer</h2>
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 rounded" title="Zoom out">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-                  </svg>
-                </button>
-                <button className="p-2 hover:bg-gray-100 rounded" title="Zoom in">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                  </svg>
-                </button>
-                <span className="text-sm text-gray-600">Page 1 of 5</span>
+      <div style={{ display: 'flex', height: 'calc(100vh - 300px)' }}>
+        {/* Document Viewer */}
+        <div style={{ flex: 1, padding: '1rem', overflow: 'auto' }}>
+          <div className="slds-card" style={{ height: '100%' }}>
+            <div className="slds-card__header">
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Document Viewer</h2>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="slds-button" title="Zoom out">−</button>
+                <button className="slds-button" title="Zoom in">+</button>
+                <span style={{ fontSize: '0.875rem', color: '#706e6b', padding: '0.5rem' }}>Page 1 of 5</span>
               </div>
             </div>
+            <div className="slds-card__body">
+              <div
+                ref={documentRef}
+                className="rcm-document-content"
+                style={{
+                  maxWidth: '48rem',
+                  margin: '0 auto',
+                  padding: '2rem',
+                  background: 'white',
+                  border: '1px solid #dddbda',
+                  borderRadius: '0.25rem',
+                  minHeight: '800px',
+                }}
+              >
+                <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '2rem' }}>
+                  CORDIM® (Medication Name)
+                </h1>
 
-            {/* Mock PDF Document Content */}
-            <div className="bg-white border border-gray-300 rounded p-8 shadow-inner min-h-[600px]">
-              <div className="max-w-2xl mx-auto space-y-6">
-                <h1 className="text-3xl font-bold text-gray-900 mb-6">CORDIM® (Medication Name)</h1>
-
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-3 border-b-2 border-gray-300 pb-2">
+                <div style={{ marginBottom: '2rem' }}>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: 600,
+                    marginBottom: '1rem',
+                    borderBottom: '2px solid #dddbda',
+                    paddingBottom: '0.5rem',
+                  }}>
                     INDICATIONS AND USAGE
                   </h2>
-                  <p
-                    className="text-gray-800 leading-relaxed bg-yellow-50 border-l-4 border-yellow-400 pl-4 py-2"
-                    title="Annotation by Dr. Sarah Chen"
-                  >
+                  <p style={{ lineHeight: 1.8, color: '#3e3e3c' }}>
                     Cordim is indicated for the treatment of arterial hypertension in adults to lower blood pressure.
                     Lowering blood pressure reduces the risk of fatal and nonfatal cardiovascular events, primarily
-                    strokes and myocardial infarctions.
+                    strokes and myocardial infarctions. Patients should be monitored regularly during treatment.
                   </p>
                 </div>
 
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-3 border-b-2 border-gray-300 pb-2">
+                <div style={{ marginBottom: '2rem' }}>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: 600,
+                    marginBottom: '1rem',
+                    borderBottom: '2px solid #dddbda',
+                    paddingBottom: '0.5rem',
+                  }}>
                     DOSAGE AND ADMINISTRATION
                   </h2>
-                  <p className="text-gray-800 leading-relaxed mb-4">
+                  <p style={{ lineHeight: 1.8, color: '#3e3e3c', marginBottom: '1rem' }}>
                     The recommended starting dose of Cordim is 5 mg once daily. Depending on the patient's response,
-                    the dose may be increased to a maximum of 10 mg once daily.
+                    the dose may be increased to a maximum of 10 mg once daily. Dose adjustments should be made based
+                    on clinical response and patient tolerability.
                   </p>
-                  <ul className="list-disc list-inside text-gray-800 space-y-2 ml-4">
+                  <ul style={{ listStyle: 'disc', marginLeft: '2rem', lineHeight: 1.8, color: '#3e3e3c' }}>
                     <li>Initial dose: 5 mg once daily</li>
                     <li>Maximum dose: 10 mg once daily</li>
                     <li>Adjust dose based on patient response and tolerability</li>
+                    <li>May be taken with or without food</li>
                   </ul>
                 </div>
 
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-3 border-b-2 border-gray-300 pb-2">
+                <div style={{ marginBottom: '2rem' }}>
+                  <h2 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: 600,
+                    marginBottom: '1rem',
+                    borderBottom: '2px solid #dddbda',
+                    paddingBottom: '0.5rem',
+                  }}>
                     CLINICAL PHARMACOLOGY
                   </h2>
-                  <p
-                    className="text-gray-800 leading-relaxed bg-green-50 border-l-4 border-green-400 pl-4 py-2"
-                    title="Annotation by John Martinez - Resolved"
-                  >
+                  <p style={{ lineHeight: 1.8, color: '#3e3e3c' }}>
                     Clinical efficacy demonstrated in Phase III trials with 1,200+ patients. Cordim showed significant
                     blood pressure reduction compared to placebo (p &lt; 0.001). The antihypertensive effect was
-                    sustained over 24 hours with once-daily dosing.
+                    sustained over 24 hours with once-daily dosing. Mechanism of action involves selective inhibition
+                    of calcium channels in vascular smooth muscle.
                   </p>
                 </div>
 
-                <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded">
-                  <p className="text-sm text-blue-900">
-                    💡 <strong>Demo Note:</strong> Select any text above to create annotations. Highlighted sections
-                    show existing annotations (yellow = open, green = resolved).
+                <div style={{
+                  padding: '1rem',
+                  background: '#d8edff',
+                  border: '1px solid #0176d3',
+                  borderRadius: '0.25rem',
+                  marginTop: '2rem',
+                }}>
+                  <p style={{ fontSize: '0.875rem', color: '#014486', margin: 0 }}>
+                    💡 <strong>Demo Tip:</strong> Select any text in this document to create an annotation.
+                    Try highlighting different sections to see how annotations work!
                   </p>
                 </div>
               </div>
@@ -284,84 +354,76 @@ export default function RCMWorkflowDemo() {
         </div>
 
         {/* Annotations Panel */}
-        <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+        <div style={{ width: '24rem', borderLeft: '1px solid #dddbda', background: 'white', display: 'flex', flexDirection: 'column' }}>
           {/* Tabs */}
-          <div className="flex border-b border-gray-200 bg-gray-50">
-            <button
-              onClick={() => setActiveTab('annotations')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'annotations'
-                  ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Annotations ({annotations.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('workitems')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'workitems'
-                  ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Work Items
-            </button>
-            <button
-              onClick={() => setActiveTab('assistant')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'assistant'
-                  ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              AI Assistant
-            </button>
+          <div className="slds-tabs_scoped">
+            <ul className="slds-tabs_scoped__nav" role="tablist">
+              <li className={`slds-tabs_scoped__item ${activeTab === 'annotations' ? 'slds-is-active' : ''}`} role="presentation">
+                <a
+                  className="slds-tabs_scoped__link"
+                  role="tab"
+                  onClick={() => setActiveTab('annotations')}
+                >
+                  Annotations ({annotations.length})
+                </a>
+              </li>
+              <li className={`slds-tabs_scoped__item ${activeTab === 'workitems' ? 'slds-is-active' : ''}`} role="presentation">
+                <a
+                  className="slds-tabs_scoped__link"
+                  role="tab"
+                  onClick={() => setActiveTab('workitems')}
+                >
+                  Work Items
+                </a>
+              </li>
+              <li className={`slds-tabs_scoped__item ${activeTab === 'assistant' ? 'slds-is-active' : ''}`} role="presentation">
+                <a
+                  className="slds-tabs_scoped__link"
+                  role="tab"
+                  onClick={() => setActiveTab('assistant')}
+                >
+                  AI Assistant
+                </a>
+              </li>
+            </ul>
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-auto p-4">
+          <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
             {activeTab === 'annotations' && (
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {annotations.map((ann) => (
-                  <div
-                    key={ann.id}
-                    className={`border rounded-lg overflow-hidden transition-all ${
-                      selectedAnnotation === ann.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="p-3 bg-gray-50">
-                      <div className="flex items-start justify-between mb-2">
-                        <span
-                          className={`px-2 py-1 text-xs font-semibold rounded ${
-                            ann.status === 'open'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-green-100 text-green-700'
-                          }`}
-                        >
+                  <div key={ann.id} className="slds-card" style={{ borderColor: selectedAnnotation === ann.id ? '#0176d3' : '#dddbda' }}>
+                    <div style={{ padding: '0.75rem', background: '#f3f2f2' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <span className={`slds-badge ${ann.status === 'open' ? 'slds-badge_warning' : 'slds-badge_success'}`}>
                           {ann.status}
                         </span>
                         {ann.linkedClaim && (
-                          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded font-medium">
+                          <span style={{ fontSize: '0.75rem', color: '#0176d3', fontWeight: 600 }}>
                             {ann.linkedClaim}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-700 italic mb-2">&quot;{ann.text.substring(0, 60)}...&quot;</p>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
+                      <p style={{ fontSize: '0.875rem', color: '#3e3e3c', fontStyle: 'italic', marginBottom: '0.5rem' }}>
+                        &quot;{ann.text.substring(0, 80)}...&quot;
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#706e6b' }}>
                         <span>{ann.author}</span>
-                        <span>Page {ann.pageNumber}</span>
+                        <span>{ann.timestamp.toLocaleDateString()}</span>
                       </div>
                     </div>
 
                     {selectedAnnotation === ann.id ? (
-                      <div className="p-3 border-t border-gray-200">
-                        <div className="space-y-2 mb-3">
+                      <div style={{ padding: '0.75rem', borderTop: '1px solid #dddbda' }}>
+                        <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                           {ann.comments.map((comment) => (
-                            <div key={comment.id} className="p-2 bg-blue-50 rounded text-sm">
-                              <div className="font-semibold text-blue-900 text-xs">{comment.author}</div>
-                              <div className="text-gray-700">{comment.text}</div>
-                              <div className="text-xs text-gray-500 mt-1">
+                            <div key={comment.id} style={{ padding: '0.5rem', background: '#d8edff', borderRadius: '0.25rem' }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#014486', marginBottom: '0.25rem' }}>
+                                {comment.author}
+                              </div>
+                              <div style={{ fontSize: '0.875rem', color: '#3e3e3c' }}>{comment.text}</div>
+                              <div style={{ fontSize: '0.625rem', color: '#706e6b', marginTop: '0.25rem' }}>
                                 {comment.timestamp.toLocaleString()}
                               </div>
                             </div>
@@ -372,19 +434,28 @@ export default function RCMWorkflowDemo() {
                           value={newComment}
                           onChange={(e) => setNewComment(e.target.value)}
                           placeholder="Add a comment..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm resize-none mb-2"
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #dddbda',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.875rem',
+                            resize: 'none',
+                            marginBottom: '0.5rem',
+                          }}
                           rows={3}
                         />
-                        <div className="flex gap-2">
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button
                             onClick={() => addComment(ann.id)}
-                            className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700"
+                            className="slds-button slds-button_brand"
+                            style={{ flex: 1 }}
                           >
                             Add Comment
                           </button>
                           <button
                             onClick={() => toggleAnnotationStatus(ann.id)}
-                            className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-semibold rounded hover:bg-gray-200"
+                            className="slds-button slds-button_neutral"
                           >
                             {ann.status === 'open' ? 'Resolve' : 'Reopen'}
                           </button>
@@ -393,36 +464,50 @@ export default function RCMWorkflowDemo() {
                     ) : (
                       <button
                         onClick={() => setSelectedAnnotation(ann.id)}
-                        className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#0176d3',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          borderTop: '1px solid #dddbda',
+                        }}
                       >
                         View {ann.comments.length} comment{ann.comments.length !== 1 ? 's' : ''}
                       </button>
                     )}
                   </div>
                 ))}
+
+                {annotations.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#706e6b' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💬</div>
+                    <p style={{ fontSize: '0.875rem' }}>No annotations yet</p>
+                    <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Select text to create your first annotation</p>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'workitems' && (
-              <div className="text-center py-12 text-gray-500">
-                <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <p className="text-sm">No work items assigned</p>
+              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#706e6b' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
+                <p style={{ fontSize: '0.875rem' }}>No work items assigned</p>
               </div>
             )}
 
             {activeTab === 'assistant' && (
-              <div className="text-center py-12 text-gray-500">
-                <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-                <p className="text-sm">AI Assistant coming soon</p>
+              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#706e6b' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🤖</div>
+                <p style={{ fontSize: '0.875rem' }}>AI Assistant coming soon</p>
               </div>
             )}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
