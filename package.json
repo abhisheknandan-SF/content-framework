@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy": "npm run build && touch out/.nojekyll && gh-pages -d out -t true"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.76",
@@ -28,7 +29,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "gh-pages": "^6.3.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vercel": "^53.4.0"
   }
 }
