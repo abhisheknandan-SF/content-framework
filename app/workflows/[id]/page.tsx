@@ -1,6 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+export async function generateStaticParams() {
+  return [
+    { id: 'regulated-content-management' },
+    { id: 'ai-assisted-document-validation' },
+  ];
+}
+
 interface Workflow {
   id: string;
   title: string;

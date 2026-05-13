@@ -2,6 +2,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { extractionPatterns } from '@/lib/patterns/extraction';
 
+export async function generateStaticParams() {
+  return extractionPatterns.map((pattern) => ({
+    id: pattern.id,
+  }));
+}
+
 export default async function PatternDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const allPatterns = [...extractionPatterns];
