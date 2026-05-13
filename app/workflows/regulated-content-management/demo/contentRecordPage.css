@@ -1,0 +1,2077 @@
+/* Regulated Content record — Figma-aligned (page header, path, tabs, viewer + scoped panel) */
+
+.content-record-page-card {
+    --slds-c-card-color-background: transparent;
+    --slds-c-card-radius-border: 0;
+    --slds-c-card-shadow: 0 0 0 0;
+    --cr-doc-viewport-max: min(75dvh, 52rem);
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-record-page-inner {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    /* Let hero + article define natural height so the parent wrap can scroll and sticky can engage */
+    min-height: min-content;
+    width: 100%;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    /* Matches header surface so no white sliver around the page-header block */
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+    padding: 0 1.5rem 1.5rem;
+}
+
+/* Record page header + path — scrolls away while the article (tabs + viewer) stays in view */
+.content-record-hero {
+    flex: 0 0 auto;
+    width: 100%;
+}
+
+/* Main tabset: white “card” for document + panes; sits on surface-2 (page-inner) */
+.content-record-article {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    /* Do not flex-fill the column or the page never overflows the scrollport and sticky does nothing */
+    flex: 0 0 auto;
+    min-width: 0;
+    width: 100%;
+    min-height: 0;
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+    box-sizing: border-box;
+    isolation: isolate;
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+    overflow: hidden;
+    margin: 0;
+}
+
+/* —— Figma 457:75280 — Page Header: surface-2, 16px sections, breadcrumbs + title row + detail row —— */
+.content-record-page-header-shell {
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+    border-bottom: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+/* Figma: min-h 51px title row, 16px padding, actions gap 8px + pl-8 */
+.content-record-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--slds-g-spacing-small, 0.75rem);
+    box-sizing: border-box;
+    padding: var(--slds-g-spacing-4, 1rem);
+    min-height: 3.1875rem;
+}
+
+.content-record-page-header-main {
+    display: flex;
+    flex: 1 1 12rem;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    align-items: center;
+    min-width: 0;
+    min-height: 3.1875rem;
+}
+
+/* Header object icon: no background tile (icon on surface-2) */
+.content-record-page-header-icon {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+
+/* LBC: no inner boundary padding; control glyph size via sizing hook */
+.content-record-page-header-icon .content-record-header-doc-icon {
+    --slds-c-icon-sizing: 1.25rem; /* 20px */
+    --slds-c-icon-spacing-block: 0;
+    --slds-c-icon-spacing-inline: 0;
+}
+
+.content-record-page-header-titles {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    flex: 1;
+}
+
+.content-record-breadcrumbs-wrap {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 2px;
+}
+
+.content-record-breadcrumbs {
+    min-width: 0;
+}
+
+/* Figma 457:75280: 13px / 18px line, on-surface-1 (token can resolve >13px, so use rem) */
+.content-record-eyebrow {
+    margin: 0 0 var(--slds-g-spacing-xxx-small, 0.125rem);
+    max-width: 100%;
+    font-size: 0.8125rem; /* 13px @ 16px root — object label */
+    line-height: 1.125rem; /* 18px */
+    font-weight: var(--slds-g-font-weight-3, 400);
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Figma: font-scale-5 (28px), line 35px, on-surface-3 */
+.content-record-page-title {
+    margin: 0;
+    max-width: 100%;
+    font-size: 1.75rem;
+    font-weight: var(--slds-g-font-weight-4, 400);
+    line-height: 2.1875rem;
+    color: var(--slds-g-color-on-surface-3, #03234d);
+    word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Figma: actions gap-2 (8px), pl-2 (8px) */
+.content-record-page-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    padding-left: var(--slds-g-spacing-2, 0.5rem);
+}
+
+/* Figma 457:75280 “Detail row”: 16px padding, items max 225px, label 12/17, value 13/18, gap 2px */
+.content-record-highlight-panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
+    justify-content: space-between;
+    box-sizing: border-box;
+    gap: 2px var(--slds-g-spacing-4, 1rem);
+    width: 100%;
+    /* Detail row: p-16; matches Page Header frame */
+    padding: var(--slds-g-spacing-4, 1rem);
+    border-top: none;
+}
+
+/* 225px × 37px block: col gap 2px; label row h-16, value 13/18 (Figma inspect) */
+.content-record-highlight-field {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    flex: 1 1 0;
+    align-items: flex-start;
+    align-self: flex-start;
+    justify-content: flex-start;
+    gap: 2px;
+    min-width: 0;
+    max-width: 14.0625rem; /* 225px */
+    width: auto;
+    min-height: 0;
+    box-sizing: border-box;
+}
+
+/* Body/font-scale-neg-1/Regular: 12px, line 17, on-surface-1; title row 16px tall in Figma */
+.content-record-highlight-label {
+    display: block;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    height: 1rem;
+    min-height: 1rem;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    line-height: 1.0625rem;
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    font-weight: var(--slds-g-font-weight-4, 400);
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Body/font-scale-base: 13px, line 18, on-surface-3 (Figma uses #001e5b / #03234d) */
+.content-record-highlight-value {
+    display: block;
+    flex: 0 0 auto;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-size: var(--slds-g-font-size-base, var(--slds-g-font-scale-2, 0.8125rem));
+    line-height: 1.125rem;
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+    font-weight: var(--slds-g-font-weight-4, 400);
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* —— Figma 457:75281 — RCM Content Version Path: 20px rail, 32px steps, sliding inverse-1 pill —— */
+.content-record-path-actions {
+    padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+    border-bottom: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.content-record-path-figma {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    width: 100%;
+}
+
+/* —— Figma 457:75285 / 75286 / 75294 — path: pill ends + 17/20px caps, white hairline, z-stack —— */
+.content-record-path-rail {
+    display: flex;
+    flex: 1 1 16rem;
+    min-width: 12rem;
+    min-height: 2rem;
+    border-radius: var(--slds-g-radius-border-4, 1.25rem);
+    overflow: hidden;
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+    box-shadow: inset 0 0 0 1px var(--slds-g-color-border-base-1, #e5e5e5);
+    box-sizing: border-box;
+}
+
+.content-record-path-stages {
+    --path-stroke: var(--slds-g-color-surface-1, #ffffff);
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 2rem;
+    width: 100%;
+    gap: 0;
+    box-sizing: border-box;
+}
+
+/* Tuck under previous step’s right cap (only right points; no left notches on steps 2+) */
+.content-path-seg-wrap {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 2rem;
+    box-sizing: border-box;
+}
+
+.content-path-seg-wrap:not(:first-child) {
+    margin-left: -0.9375rem; /* 15px — interlock with previous step’s right cap */
+}
+
+.content-path-seg {
+    --path-seg-bg: var(--slds-g-color-surface-container-3, #e5e5e5);
+    --path-seg-fg: var(--slds-g-color-on-surface-2, #2e2e2e);
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 2rem;
+    isolation: isolate;
+    /* White hairline on the full segment (caps + stage) — matches Figma “stroke” */
+    filter: drop-shadow(0.4px 0 0 var(--path-stroke)) drop-shadow(-0.4px 0 0 var(--path-stroke))
+        drop-shadow(0 0.4px 0 var(--path-stroke)) drop-shadow(0 -0.4px 0 var(--path-stroke))
+        drop-shadow(0.3px 0.3px 0 var(--path-stroke)) drop-shadow(0.3px -0.3px 0 var(--path-stroke))
+        drop-shadow(-0.3px 0.3px 0 var(--path-stroke)) drop-shadow(-0.3px -0.3px 0 var(--path-stroke));
+}
+
+.content-path-seg_is-active {
+    --path-seg-bg: var(--slds-g-color-surface-container-inverse-1, #032d60);
+    --path-seg-fg: var(--slds-g-color-on-surface-inverse-1, #ffffff);
+}
+
+/* Left cap (17×32) — optional; path uses right caps only (see pathStepItems) */
+.content-path-seg__end_left {
+    flex: 0 0 auto;
+    z-index: 1;
+    align-self: stretch;
+    width: 1.0625rem; /* 17px */
+    min-width: 1.0625rem;
+    height: 2rem;
+    min-height: 2rem;
+    background-color: var(--path-seg-bg);
+    clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+/* Right tooth (20×32); Figma right: -2px, tip at center-right */
+.content-path-seg__end_right {
+    flex: 0 0 auto;
+    z-index: 1;
+    align-self: stretch;
+    width: 1.25rem; /* 20px */
+    min-width: 1.25rem;
+    height: 2rem;
+    min-height: 2rem;
+    margin-right: -0.125rem; /* -2px */
+    background-color: var(--path-seg-bg);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+/* Stage: flanked by caps; 32px height; 13/18 type */
+.content-path-seg__stage {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: row;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
+    min-width: 0;
+    min-height: 2rem;
+    box-sizing: border-box;
+    background-color: var(--path-seg-bg);
+}
+
+/* 457:75285 — first: pill-left, pl-16, no right radius (cap carries point) */
+.content-path-seg_first .content-path-seg__stage {
+    padding: 0 var(--slds-g-spacing-1, 0.25rem) 0 var(--slds-g-spacing-4, 1rem);
+    border-top-left-radius: 1rem;
+    border-bottom-left-radius: 1rem;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* 457:75286 — middle: pr-1 on stage in file */
+.content-path-seg_middle .content-path-seg__stage {
+    padding: 0 var(--slds-g-spacing-1, 0.25rem) 0 var(--slds-g-spacing-1, 0.25rem);
+    border-radius: 0;
+}
+
+/* 457:75294 — final: pill-right, pr-12, min-w-74 */
+.content-path-seg_last .content-path-seg__stage {
+    flex: 1 1 4.625rem; /* 74px min in Figma */
+    min-width: 4.625rem;
+    padding: 0 var(--slds-g-spacing-3, 0.75rem) 0 0.25rem; /* pr-12 Figma */
+    border-top-right-radius: 1rem;
+    border-bottom-right-radius: 1rem;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.content-path-seg-label {
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    max-width: 100%;
+    padding: 0 var(--slds-g-spacing-2, 0.5rem);
+    font-size: var(--slds-g-font-scale-2, 0.8125rem);
+    line-height: 1.125rem;
+    color: var(--path-seg-fg, var(--slds-g-color-on-surface-2, #2e2e2e));
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--slds-g-font-weight-4, 400);
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.content-record-extract-btn {
+    flex-shrink: 0;
+    --slds-c-button-line-height: 2rem;
+    min-height: 2rem;
+}
+
+/* Figma: split — 32px height, pill ends, border-2, accent-2 label semibold */
+.content-record-send-split {
+    display: flex;
+    flex-shrink: 0;
+    align-items: stretch;
+    height: 2rem;
+}
+
+.content-record-btn-send-review {
+    --slds-c-button-neutral-color-background: var(--slds-g-color-surface-container-1, #ffffff);
+    --slds-c-button-neutral-color-background-hover: var(--slds-g-color-surface-container-1, #ffffff);
+    --slds-c-button-neutral-color-border: var(--slds-g-color-border-2, #5c5c5c);
+    --slds-c-button-neutral-color-border-hover: var(--slds-g-color-border-2, #5c5c5c);
+    --slds-c-button-text-color: var(--slds-g-color-accent-2, #0250d9);
+    --slds-c-button-text-color-hover: var(--slds-g-color-accent-2, #0250d9);
+    min-height: 2rem;
+    padding-left: var(--slds-g-spacing-4, 1rem);
+    padding-right: var(--slds-g-spacing-4, 1rem);
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 9999px;
+    border-bottom-left-radius: 9999px;
+    font-weight: var(--slds-g-font-weight-6, 600);
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    line-height: 1.1875rem;
+}
+
+.content-record-btn-send-review-chevron {
+    width: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 9999px;
+    border-bottom-right-radius: 9999px;
+    margin-left: -1px;
+    --slds-c-button-color-border: var(--slds-g-color-border-2, #5c5c5c);
+    --slds-c-button-color-border-hover: var(--slds-g-color-border-2, #5c5c5c);
+    --slds-c-button-color-background: var(--slds-g-color-surface-container-1, #ffffff);
+    --slds-c-button-color-background-hover: var(--slds-g-color-surface-container-1, #ffffff);
+}
+
+/* —— Main tabset —— */
+.content-record-main-tabset {
+    /* Content-sized: article column no longer flex-fills the viewport (enables parent scroll + sticky) */
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+/* LBC: active “Document” tab — flex column so the document row gets a full-height flex chain. */
+lightning-tabset.content-record-main-tabset > lightning-tab.slds-show {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.content-record-main-tabset .slds-tabs_default__nav {
+    padding-left: var(--slds-g-spacing-medium, 1rem);
+    padding-right: var(--slds-g-spacing-medium, 1rem);
+}
+
+.content-record-tab-panel {
+    min-height: 0;
+    box-sizing: border-box;
+}
+
+.content-record-tab-panel_document {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    /* Definite height for doc + sidebar: no longer rely on parent flex filling the column */
+    min-height: var(--cr-doc-viewport-max, min(75dvh, 52rem));
+    max-height: var(--cr-doc-viewport-max, min(75dvh, 52rem));
+    overflow: hidden;
+}
+
+/* —— Document + sidebar —— */
+.content-record-doc-layout {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    align-content: stretch;
+    min-width: 0;
+    max-height: 100%;
+    min-height: var(--cr-doc-viewport-max, min(75dvh, 52rem));
+    overflow: hidden;
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.content-record-doc-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Draggable splitter between document viewer and annotation panel */
+.content-record-splitter {
+    flex-shrink: 0;
+    width: var(--cr-splitter-width, 8px);
+    align-self: stretch;
+    cursor: col-resize;
+    touch-action: none;
+    background: linear-gradient(
+        to right,
+        transparent 0,
+        transparent 1px,
+        var(--slds-g-color-border-base-1, #e5e5e5) 1px,
+        var(--slds-g-color-border-base-1, #e5e5e5) 5px,
+        transparent 5px,
+        transparent 100%
+    );
+    position: relative;
+    z-index: 1;
+}
+
+.content-record-splitter:hover,
+.content-record-splitter:focus {
+    background-color: var(--slds-g-color-surface-container-3, #e5e5e5);
+}
+
+.content-record-splitter:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--slds-g-color-border-brand-1, #0176d3);
+}
+
+.content-record-doc-sidebar {
+    /* width set in JS; min-width prevents flex from visually collapsing before/without JS */
+    min-width: var(--cr-annotation-sidebar-min, 240px);
+    flex: 0 0 auto;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    /* Match document column height so the scoped tab card + bottom border fill the right panel */
+    min-height: var(--cr-doc-viewport-max, min(75dvh, 52rem));
+    max-height: var(--cr-doc-viewport-max, min(75dvh, 52rem));
+    overflow: hidden;
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+    box-sizing: border-box;
+}
+
+/* Figma 457:76056 / RCL — rounded scoped panel; single 16px inset for tab body */
+.content-record-scoped-shell {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    align-self: stretch;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    border-radius: var(--slds-g-radius-border-3, 0.5rem);
+    /* Rounded + overflow hidden clips the tabset’s 1px SLDS border (subpixel); draw edge with inset ring */
+    box-shadow: inset 0 0 0 1px var(--slds-g-color-border-base-1, #e5e5e5);
+    overflow: hidden;
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+}
+
+/* Native SLDS scoped tabs: full-height flex column (replaces LBC tabset so panel fills the sidebar) */
+.content-record-scoped-tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.content-record-scoped-tabs .slds-tabs_scoped__nav {
+    flex-shrink: 0;
+}
+
+/* Match Figma: active scoped tab label uses accent (same as prior LBC tokens) */
+.content-record-scoped-tabs .slds-is-active .slds-tabs_scoped__link {
+    color: var(--slds-g-color-accent-2, #0176d3);
+    font-weight: var(--slds-g-font-weight-5, 500);
+}
+
+/* Panel stack: grow below tab list; only one slotted block visible via lwc:if/elseif */
+.content-record-scoped-panels {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow: hidden;
+}
+
+.content-record-scoped-panels .slds-tabs_scoped__content,
+.content-record-scoped-panels .content-record-scoped-tab-body {
+    /* 16px left/right (Figma) for annotation cards + work items; vertical handled by list/tools */
+    padding-block: 0;
+    padding-inline: var(--slds-g-spacing-4, 1rem);
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Match prior LBC: flat token panel spacing was zeroed in host */
+    border-block-start: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    box-shadow: none;
+    background-clip: padding-box;
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+    border: var(--slds-g-sizing-border-1) solid var(--slds-s-navigation-color-border, var(--slds-g-color-border-1));
+    border-top: 0;
+    border-bottom-left-radius: var(--slds-s-navigation-radius-border, var(--slds-g-radius-border-2, 0.25rem));
+    border-bottom-right-radius: var(--slds-s-navigation-radius-border, var(--slds-g-radius-border-2, 0.25rem));
+}
+
+.content-record-scoped-tab-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding-block: 0;
+    padding-inline: var(--slds-g-spacing-4, 1rem);
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+    overflow: hidden;
+}
+
+/* Content Work items scoped tab (Figma 514:115046) */
+.content-record-work-items-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.content-record-work-items-heading {
+    margin: 0;
+}
+
+.content-record-work-items-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+}
+
+.content-record-work-items-search {
+    flex: 1;
+    min-width: 0;
+    --slds-c-input-radius-border: var(--slds-g-radius-border-4, 1rem);
+}
+
+.content-record-work-items-toolbar-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.125rem;
+}
+
+.content-record-work-items-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+}
+
+.content-record-work-item {
+    display: flex;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+    align-items: flex-start;
+    padding: var(--slds-g-spacing-small, 0.75rem) var(--slds-g-spacing-x-small, 0.5rem);
+    border-bottom: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.content-record-work-item:last-child {
+    border-bottom: none;
+}
+
+.content-record-work-item-icon {
+    flex-shrink: 0;
+    padding-top: 0.125rem;
+}
+
+.content-record-work-item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.content-record-work-item-name {
+    font-size: var(--slds-g-font-scale-2, 0.8125rem);
+    font-weight: var(--slds-g-font-weight-6, 600);
+    color: var(--slds-g-color-on-surface-3, #03234d);
+    line-height: 1.25;
+}
+
+.content-record-work-item-meta {
+    font-size: var(--slds-g-font-size-1, 0.75rem);
+    color: var(--slds-g-color-on-surface-2, #706e6b);
+}
+
+.content-record-work-item-dot {
+    margin: 0 0.25rem;
+}
+
+/* Content Assistant scoped tab */
+.content-record-assistant-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    background: var(--slds-g-color-surface-1, #ffffff);
+    padding-bottom: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.content-record-assistant-header {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    padding: var(--slds-g-spacing-small, 0.75rem) 0;
+    border-bottom: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.content-record-assistant-header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--slds-g-radius-border-circle, 50%);
+    background: var(--slds-g-color-brand-base-95, #edf4ff);
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.content-record-assistant-title {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.25rem;
+    font-weight: var(--slds-g-font-weight-6, 600);
+    color: var(--slds-g-color-on-surface-3, #03234d);
+    white-space: nowrap;
+}
+
+.content-record-assistant-listening-pill {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-1, 0.25rem);
+    min-height: 2rem;
+    padding: 0 var(--slds-g-spacing-small, 0.75rem);
+    border-radius: 999px;
+    color: var(--slds-g-color-on-surface-inverse-1, #ffffff);
+    background: linear-gradient(135deg, #a64aff, #0d64f5);
+    font-size: var(--slds-g-font-size-2, 0.75rem);
+    font-weight: var(--slds-g-font-weight-6, 600);
+}
+
+.content-record-assistant-header-actions {
+    margin-left: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.content-record-assistant-thread {
+    display: flex;
+    flex-direction: column;
+    gap: var(--slds-g-spacing-small, 0.75rem);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--slds-g-spacing-small, 0.75rem) 0 0;
+}
+
+.content-record-assistant-thread-inner {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: var(--slds-g-spacing-small, 0.75rem);
+    min-height: 100%;
+}
+
+.content-record-assistant-message-card {
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: 1rem;
+    background: var(--slds-g-color-surface-container-1, #ffffff);
+    padding: var(--slds-g-spacing-small, 0.75rem);
+    box-shadow: 0 2px 6px rgba(24, 24, 24, 0.12);
+}
+
+.content-record-assistant-message-card_muted {
+    background: var(--slds-g-color-surface-2, #f3f3f3);
+}
+
+.content-record-assistant-message-card_user {
+    border-color: var(--slds-g-color-border-brand-1, #1b96ff);
+    background: var(--slds-g-color-brand-base-95, #edf4ff);
+}
+
+.content-record-assistant-message-card_error {
+    border-color: var(--slds-g-color-border-error-1, #ea001e);
+    background: var(--slds-g-color-error-base-95, #fef1ee);
+}
+
+.content-record-assistant-message-head {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.content-record-assistant-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: var(--slds-g-radius-border-circle, 50%);
+}
+
+.content-record-assistant-avatar_summary {
+    background: var(--slds-g-color-brand-base-95, #edf4ff);
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.content-record-assistant-avatar_assistant {
+    background: var(--slds-g-color-palette-purple-95, #f4f0ff);
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-palette-purple-50, #9050e9);
+}
+
+.content-record-assistant-message-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-1, 0.25rem);
+    min-width: 0;
+}
+
+.content-record-assistant-message-author {
+    margin: 0;
+    color: var(--slds-g-color-on-surface-3, #03234d);
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
+    font-weight: var(--slds-g-font-weight-6, 600);
+}
+
+.content-record-assistant-badge {
+    border-radius: 999px;
+    background: var(--slds-g-color-surface-container-3, #e5e5e5);
+    color: var(--slds-g-color-on-surface-2, #706e6b);
+    font-size: var(--slds-g-font-size-1, 0.75rem);
+    line-height: 1rem;
+    padding: 0 var(--slds-g-spacing-1, 0.25rem);
+}
+
+.content-record-assistant-message-body {
+    margin: var(--slds-g-spacing-2, 0.5rem) 0 0;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.content-record-assistant-message-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-1, 0.25rem);
+    margin-top: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.content-record-assistant-chip {
+    border: 1px solid var(--slds-g-color-border-base-1, #d8dde6);
+    border-radius: 999px;
+    background: var(--slds-g-color-surface-1, #ffffff);
+    color: var(--slds-g-color-on-surface-2, #5c5c5c);
+    font-size: var(--slds-g-font-size-1, 0.75rem);
+    line-height: 1.25rem;
+    padding: 0 var(--slds-g-spacing-2, 0.5rem);
+}
+
+.content-record-assistant-icon-btn {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--slds-g-color-border-base-1, #d8dde6);
+    border-radius: var(--slds-g-radius-border-circle, 50%);
+    background: var(--slds-g-color-surface-1, #ffffff);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.content-record-assistant-composer {
+    border-top: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    padding: var(--slds-g-spacing-small, 0.75rem) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.content-record-assistant-composer-shell {
+    border: 1px solid var(--slds-g-color-border-base-1, #5c5c5c);
+    border-radius: 1.5rem;
+    padding: var(--slds-g-spacing-small, 0.75rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--slds-g-spacing-small, 0.75rem);
+    background: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.content-record-assistant-input {
+    --slds-c-input-color-border: transparent;
+    --slds-c-input-shadow: none;
+    --slds-c-input-radius-border: 0;
+    --slds-c-input-spacing-inline-start: 0;
+    --slds-c-input-spacing-inline-end: 0;
+}
+
+.content-record-assistant-composer-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    flex-wrap: wrap;
+}
+
+.content-record-assistant-composer-actions lightning-button-icon {
+    margin-left: auto;
+}
+
+.content-record-viewer-toolbar {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    border-bottom: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.content-record-viewer-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+    padding: var(--slds-g-spacing-x-small, 0.5rem) var(--slds-g-spacing-small, 0.75rem);
+}
+
+.content-record-viewer-toolbar-row_paging {
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+    padding-top: var(--slds-g-spacing-small, 0.75rem);
+    padding-bottom: var(--slds-g-spacing-small, 0.75rem);
+}
+
+/* HTML preview: Annotate action + icon tools (injected script in same-origin iframe) */
+.content-record-html-annotate-row {
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--slds-g-spacing-small, 0.75rem);
+    border-top: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+    padding-top: var(--slds-g-spacing-x-small, 0.5rem);
+    padding-bottom: var(--slds-g-spacing-x-small, 0.5rem);
+}
+
+.content-record-html-annotate-start {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+    min-width: 0;
+}
+
+.content-record-html-annotate-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding-left: var(--slds-g-spacing-x-small, 0.5rem);
+    border-left: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.content-record-html-annotate-hint {
+    flex: 1 1 8rem;
+    min-width: 0;
+    max-width: 22rem;
+    margin: 0;
+    text-align: end;
+}
+
+.content-record-file-title {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+    min-width: 0;
+}
+
+.content-record-file-name {
+    font-size: var(--slds-g-font-size-3, 0.8125rem);
+    font-weight: var(--slds-g-font-weight-5, 500);
+    color: var(--slds-g-color-on-surface-3, #03234d);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.content-record-viewer-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+    flex-shrink: 0;
+}
+
+.content-record-paging {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    flex-wrap: wrap;
+}
+
+.content-record-page-indicator {
+    font-size: var(--slds-g-font-size-3, 0.8125rem);
+    color: var(--slds-g-color-on-surface-2, #5c5c5c);
+    margin: 0 var(--slds-g-spacing-x-small, 0.5rem);
+}
+
+.content-record-viewer-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.content-record-zoom-combo {
+    min-width: 5rem;
+    max-width: 7rem;
+}
+
+.content-record-document-preview {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+    touch-action: auto;
+}
+
+.content-record-pdf-frame,
+.content-record-pdf-host {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    border: none;
+    border-radius: 0;
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+    box-shadow: inset 0 0 0 1px var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.content-record-pdf-host {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+}
+
+/* HTML preview: scroll the panel; iframe is sized to document height (see handleHtmlFrameLoad) */
+.content-record-html-preview-scroll {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    align-self: stretch;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+}
+
+/* Stack: iframe (anchors) + absolute overlay for yellow highlights + click to jump to annotation */
+.content-record-html-iframe-stack {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-height: min(75dvh, 52rem);
+}
+
+.content-record-html-iframe-stack .content-record-html-preview-frame {
+    position: relative;
+    z-index: 0;
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: min(75dvh, 52rem);
+    height: auto;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+    box-shadow: inset 0 0 0 1px var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.content-record-html-ann-overlays {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.content-record-html-ann-overlay {
+    position: absolute;
+    /* Must not capture events — the iframe must receive text selection and clicks (activation uses postMessage). */
+    pointer-events: none;
+    background: rgba(255, 240, 120, 0.5);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px rgba(200, 175, 60, 0.35);
+    box-sizing: border-box;
+    min-width: 2px;
+    min-height: 2px;
+}
+
+.content-record-html-ann-overlay:focus-visible {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #1b96ff);
+    outline-offset: 1px;
+}
+
+.content-record-pdf-host > * {
+    flex: 1;
+    min-height: 0;
+}
+
+.content-record-preview-placeholder {
+    min-height: 20rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+}
+
+.content-record-preview-inner {
+    text-align: center;
+    padding: var(--slds-g-spacing-large, 1.5rem);
+}
+
+.content-record-preview-icon {
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-on-surface-2, #c9c9c9);
+    margin-bottom: var(--slds-g-spacing-small, 0.75rem);
+}
+
+.content-record-tab-placeholder {
+    min-height: 12rem;
+}
+
+/* —— Related tab —— */
+.content-record-related-title {
+    font-size: var(--slds-g-font-scale-2, 1rem);
+    font-weight: var(--slds-g-font-weight-6, 600);
+    color: var(--slds-g-color-on-surface-3, #03234d);
+    margin: 0 0 var(--slds-g-spacing-x-small, 0.5rem);
+}
+
+.content-record-related-item {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+}
+
+.content-record-link {
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+    text-decoration: none;
+}
+
+.content-record-link:hover {
+    text-decoration: underline;
+}
+
+.content-record-empty {
+    color: var(--slds-g-color-on-surface-2, #706e6b);
+    font-size: var(--slds-g-font-size-3, 0.8125rem);
+}
+
+/* —— Annotations panel (Figma-style cards) —— */
+.content-record-annotations-heading {
+    margin: 0;
+}
+
+.content-record-annotations-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    gap: var(--slds-g-spacing-small, 0.75rem);
+}
+
+.content-record-annotations-controls {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+}
+
+.content-record-annotations-search-field {
+    flex: 1 1 8rem;
+    min-width: 0;
+    --slds-c-input-radius-border: var(--slds-g-radius-border-4, 1rem);
+}
+
+/* Figma RCL 233:44892 — icon button (bordered) for filter, not bare utility */
+.content-record-annotations-filter-btn,
+.content-record-work-items-filter-btn {
+    flex-shrink: 0;
+    --slds-c-button-radius-border: var(--slds-g-radius-border-2, 0.25rem);
+}
+
+.content-record-annotations-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+}
+
+.content-record-annotations-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--slds-g-spacing-small, 0.75rem);
+    padding: 0;
+    margin: 0;
+}
+
+/* Annotation card — Figma RCM Component Library node 276:18379 */
+.content-record-annotation-card {
+    cursor: pointer;
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: var(--slds-g-radius-border-3, 0.75rem);
+    overflow: visible;
+    box-shadow:
+        0 0 2px rgba(0, 0, 0, 0.18),
+        0 2px 2px rgba(0, 0, 0, 0.18),
+        0 -1px 2px rgba(0, 0, 0, 0.1);
+    transition:
+        box-shadow 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.content-record-annotation-card_is-expanded {
+    border-color: var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+/* Selected state: 2px accent border (matches Figma Annotation Card selection chrome) */
+.content-record-annotation-card_is-selected {
+    border: 2px solid var(--slds-g-color-accent-container-1, #066afe);
+    box-shadow:
+        0 0 2px rgba(0, 0, 0, 0.18),
+        0 2px 2px rgba(0, 0, 0, 0.18),
+        0 -1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.content-record-annotation-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--slds-g-spacing-small, 0.5rem);
+    padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem)
+        var(--slds-g-spacing-small, 0.5rem);
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+}
+
+.content-record-annotation-chevron {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.125rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--slds-g-radius-border-circle, 50%);
+    cursor: pointer;
+    color: var(--slds-g-color-on-surface-2, #747474);
+}
+
+.content-record-annotation-chevron:hover {
+    background-color: var(--slds-g-color-surface-3, #e5e5e5);
+    color: var(--slds-g-color-on-surface-3, #181818);
+}
+
+.content-record-annotation-chevron:focus {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 2px;
+}
+
+.content-record-annotation-title-cluster {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.content-record-annotation-status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Figma anchor badge (14×14 SVG) — immediately after ANN-XXXX */
+.content-record-annotation-anchor-badge__img {
+    flex-shrink: 0;
+    display: block;
+    width: 0.875rem;
+    height: 0.875rem;
+}
+
+.content-record-annotation-icon-tint_flag {
+    --slds-c-icon-color-foreground-default: #e91e63;
+}
+
+.content-record-annotation-ann-code {
+    margin: 0;
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-4, 400);
+    line-height: 1.0625rem;
+    color: var(--slds-g-color-on-surface-3, #001e5b);
+}
+
+.content-record-annotation-card_is-expanded .content-record-annotation-ann-code {
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    line-height: 1.0625rem;
+}
+
+.content-record-annotation-more-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.content-record-annotation-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+    cursor: pointer;
+    color: var(--slds-g-color-on-surface-2, #706e6b);
+}
+
+.content-record-annotation-more:hover {
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+    border-color: var(--slds-g-color-border-base-1, #e5e5e5);
+    color: var(--slds-g-color-on-surface-3, #181818);
+}
+
+.content-record-annotation-more:focus {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 1px;
+}
+
+/* Figma: 16px bordered overflow (⚡ Button Icon - Bordered) */
+.content-record-annotation-more_circle {
+    width: 1rem;
+    height: 1rem;
+    border-radius: var(--slds-g-radius-border-circle, 50%);
+    border: 1px solid var(--slds-g-color-border-2, #5c5c5c);
+    background-color: var(--slds-g-color-surface-container-1, #ffffff);
+}
+
+.content-record-annotation-card_is-expanded .content-record-annotation-more_circle {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Figma RCM Component Library 276:19820 — user metadata (collapsed + expanded): 13px author, 12px meta */
+.content-record-annotation-meta_collapsed {
+    min-height: 0;
+    padding: 0 var(--slds-g-spacing-4, 1rem) var(--slds-g-spacing-2, 0.5rem);
+    box-sizing: border-box;
+    align-items: center;
+}
+
+.content-record-annotation-meta_collapsed .content-record-annotation-author {
+    font-size: 0.8125rem; /* 13px */
+    line-height: 1.125rem; /* 18px */
+}
+
+.content-record-annotation-meta_collapsed .content-record-annotation-time,
+.content-record-annotation-meta_collapsed .content-record-annotation-status-text {
+    font-size: 0.75rem; /* 12px */
+    line-height: 1.125rem;
+}
+
+.content-record-annotation-collapsed-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    padding: 0 var(--slds-g-spacing-4, 1rem) var(--slds-g-spacing-2, 0.5rem);
+}
+
+.content-record-annotation-figma-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.5625rem;
+    padding: var(--slds-g-spacing-1, 0.25rem) var(--slds-g-spacing-2, 0.5rem);
+    border: none;
+    border-radius: var(--slds-g-radius-border-1, 0.25rem);
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    line-height: 1.0625rem;
+    font-weight: var(--slds-g-font-weight-4, 400);
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.content-record-annotation-figma-badge:hover {
+    background-color: var(--slds-g-color-surface-3, #e5e5e5);
+    color: var(--slds-g-color-on-surface-3, #2e2e2e);
+}
+
+.content-record-annotation-figma-badge:focus {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 1px;
+}
+
+/* Legacy (replaced by figma badges) — keep for any stray references */
+.content-record-annotation-collapsed-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--slds-g-spacing-xx-small, 0.25rem);
+    padding: var(--slds-g-spacing-x-small, 0.5rem) var(--slds-g-spacing-small, 0.75rem)
+        var(--slds-g-spacing-small, 0.75rem);
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+    border-top: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.content-record-annotation-summary-pill {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.3125rem var(--slds-g-spacing-x-small, 0.5rem);
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: var(--slds-g-font-weight-4, 400);
+    color: var(--slds-g-color-on-surface-2, #706e6b);
+    cursor: pointer;
+    text-align: center;
+}
+
+.content-record-annotation-summary-pill:hover {
+    border-color: var(--slds-g-color-border-brand-1, #0176d3);
+    color: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.content-record-annotation-summary-pill:focus {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 1px;
+}
+
+.content-record-annotation-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    border-top: none;
+    padding: 0 var(--slds-g-spacing-4, 1rem) 0;
+}
+
+.content-record-annotation-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.25rem;
+    min-width: 10rem;
+    padding: 0.25rem 0;
+    background: var(--slds-g-color-surface-1, #ffffff);
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+.content-record-annotation-menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: none;
+    font-size: var(--slds-g-font-size-2, 0.75rem);
+    color: var(--slds-g-color-on-surface-3, #181818);
+    text-align: left;
+    cursor: pointer;
+}
+
+.content-record-annotation-menu-item:hover {
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+}
+
+.content-record-annotation-menu-item-checked {
+    font-weight: var(--slds-g-font-weight-6, 600);
+}
+
+.content-record-annotation-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--slds-g-spacing-xx-small, 0.25rem);
+    min-height: 1rem;
+    padding: 0 var(--slds-g-spacing-4, 1rem) var(--slds-g-spacing-small, 0.5rem);
+    border-top: none;
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.content-record-annotation-user-icon {
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-on-surface-2, #706e6b);
+    flex-shrink: 0;
+}
+
+.content-record-annotation-author {
+    color: var(--slds-g-color-accent-2, #0250d9);
+    text-decoration: none;
+    font-size: 0.8125rem; /* 13px — Figma 276:19820 */
+    line-height: 1.125rem;
+}
+
+.content-record-annotation-author_comment {
+    font-size: 0.8125rem;
+}
+
+.content-record-annotation-author:hover {
+    text-decoration: underline;
+}
+
+.content-record-annotation-dot {
+    color: var(--slds-g-color-on-surface-2, #969492);
+    font-weight: bold;
+}
+
+.content-record-annotation-time {
+    font-style: normal;
+    font-size: 0.75rem; /* 12px */
+    line-height: 1.125rem;
+}
+
+.content-record-annotation-status-text {
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+    font-size: 0.75rem; /* 12px */
+    line-height: 1.125rem;
+}
+
+/* Comments empty (no list items) — no fill; message centered to match linked claims empty */
+.content-record-annotation-section-body {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0 0 var(--slds-g-spacing-xx-small, 0.25rem);
+    padding: var(--slds-g-spacing-x-small, 0.5rem) var(--slds-g-spacing-small, 0.75rem);
+    font-size: var(--slds-g-font-size-2, 0.75rem);
+    line-height: 1.25rem;
+    text-align: center;
+    color: var(--slds-g-color-on-surface-2, #706e6b);
+    background-color: transparent;
+    border-radius: 0;
+}
+
+/* AnnotationHighlightText — Figma: warning-base-95 fill, warning-base-70 4px left */
+.content-record-annotation-card .content-record-annotation-snippet {
+    margin: 0 0 var(--slds-g-spacing-3, 0.75rem);
+    padding: var(--slds-g-spacing-small, 0.5rem) var(--slds-g-spacing-4, 1rem);
+    background-color: var(--slds-g-color-warning-base-95, #fbf3e0);
+    border: none;
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+    border-left: 4px solid var(--slds-g-color-warning-base-70, #e4a201);
+    outline: none;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+}
+
+.content-record-annotation-snippet-quote {
+    display: block;
+    font-size: var(--slds-g-font-size-3, 0.8125rem);
+    line-height: 1.125rem;
+    font-weight: var(--slds-g-font-weight-4, 400);
+    font-style: normal;
+}
+
+.content-record-annotation-linked-list {
+    border-top: none;
+}
+
+.content-record-annotation-linked-warn-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.5625rem;
+    padding: 0 var(--slds-g-spacing-xx-small, 0.25rem);
+    background-color: var(--slds-g-color-warning-container-1, #f9e3b6);
+    border-radius: var(--slds-g-radius-border-2, 0.25rem);
+}
+
+.content-record-annotation-linked-row {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-xx-small, 0.25rem);
+    min-height: 2rem;
+    padding: var(--slds-g-spacing-xx-small, 0.25rem) var(--slds-g-spacing-small, 0.5rem);
+    border-bottom: none;
+}
+
+.content-record-annotation-linked-row_is-stacked {
+    border-top: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.content-record-annotation-linked-ext {
+    flex-shrink: 0;
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-on-surface-2, #706e6b);
+}
+
+.content-record-annotation-linked-code {
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-4, 400);
+    color: var(--slds-g-color-accent-3, #022ac0);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+}
+
+.content-record-annotation-linked-code:hover {
+    text-decoration-style: solid;
+}
+
+.content-record-annotation-linked-warn {
+    flex-shrink: 0;
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-warning-1, #fe9339);
+}
+
+.content-record-annotation-linked-spacer {
+    flex: 1;
+    min-width: 0;
+}
+
+.content-record-annotation-linked-more {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    padding: 0;
+    border: 1px solid var(--slds-g-color-border-2, #5c5c5c);
+    border-radius: var(--slds-g-radius-border-circle, 50%);
+    background: var(--slds-g-color-surface-container-1, #ffffff);
+    cursor: pointer;
+    color: var(--slds-g-color-on-surface-2, #706e6b);
+}
+
+.content-record-annotation-linked-more:hover {
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+    color: var(--slds-g-color-on-surface-3, #181818);
+}
+
+.content-record-annotation-comments-list {
+    border-top: none;
+}
+
+.content-record-annotation-comment {
+    padding: var(--slds-g-spacing-small, 0.5rem) var(--slds-g-spacing-small, 0.5rem) 0;
+}
+
+.content-record-annotation-comment-hdr {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: var(--slds-g-spacing-xx-small, 0.25rem);
+}
+
+.content-record-annotation-comment-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: var(--slds-g-radius-border-circle, 50%);
+    flex-shrink: 0;
+}
+
+.content-record-annotation-comment-avatar_brand {
+    background-color: #1b96ff;
+    --slds-c-icon-color-foreground-default: #ffffff;
+}
+
+.content-record-annotation-comment-avatar_violet {
+    background-color: var(--slds-g-color-palette-purple-50, #9050e9);
+    --slds-c-icon-color-foreground-default: #ffffff;
+}
+
+.content-record-annotation-comment-spacer {
+    flex: 1;
+    min-width: 0;
+}
+
+.content-record-annotation-comment-more {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    padding: 0;
+    border: 1px solid var(--slds-g-color-border-2, #5c5c5c);
+    border-radius: var(--slds-g-radius-border-circle, 50%);
+    background: var(--slds-g-color-surface-container-1, #ffffff);
+    cursor: pointer;
+    color: var(--slds-g-color-on-surface-2, #706e6b);
+}
+
+.content-record-annotation-comment-more:hover {
+    background-color: var(--slds-g-color-surface-2, #f3f3f3);
+}
+
+.content-record-annotation-comment-body {
+    margin: 0;
+    padding: 0 var(--slds-g-spacing-small, 0.5rem);
+    font-size: var(--slds-g-font-size-3, 0.8125rem);
+    line-height: 1.25rem;
+    color: var(--slds-g-color-on-surface-3, #181818);
+}
+
+.content-record-annotation-comment-divider {
+    height: 1px;
+    margin-top: var(--slds-g-spacing-small, 0.75rem);
+    background-color: var(--slds-g-color-border-base-1, #e5e5e5);
+}
+
+.content-record-annotation-comment:last-child .content-record-annotation-comment-divider {
+    display: none;
+}
+
+.content-record-annotation-composer {
+    padding: var(--slds-g-spacing-small, 0.75rem);
+    border-top: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.content-record-annotation-composer-field {
+    --slds-c-textarea-sizing-min-height: 4.5rem;
+}
+
+.content-record-annotation-composer-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--slds-g-spacing-x-small, 0.5rem);
+}
+
+/* Linked Claims / Comments — Figma 276:18379 expandable sections */
+.content-record-annotation-expandable-slot {
+    margin: 0;
+}
+
+.content-record-annotation-section-shell {
+    margin: 0;
+    border: none;
+    background: transparent;
+    overflow: visible;
+}
+
+.content-record-annotation-section-heading {
+    margin: 0;
+}
+
+/* Single grey bar: chevron + title (left), Link / Add Comment (right) — Figma: tight vertical padding */
+.content-record-annotation-section-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+    min-height: 1.5rem;
+    padding: 0.125rem var(--slds-g-spacing-x-small, 0.5rem);
+    background-color: var(--slds-g-color-surface-container-2, #f3f3f3);
+    border-radius: var(--slds-g-radius-border-2, 0.5rem);
+}
+
+.content-record-annotation-section-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-x-small, 0.5rem);
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 1.5rem;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--slds-g-color-on-surface-2, #2e2e2e);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-4, 400);
+    line-height: 1.125rem;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+.content-record-annotation-section-toggle:hover,
+.content-record-annotation-section-toggle:focus {
+    color: inherit;
+    background-color: transparent;
+}
+
+.content-record-annotation-section-toggle:focus {
+    outline: 2px solid var(--slds-g-color-border-brand-1, #0176d3);
+    outline-offset: 2px;
+}
+
+.content-record-annotation-section-shell:not(.content-record-annotation-section-shell_open)
+    .content-record-annotation-section-panel {
+    overflow: hidden;
+    visibility: hidden;
+    opacity: 0;
+    height: 0;
+    padding-top: 0;
+}
+
+.content-record-annotation-section-shell.content-record-annotation-section-shell_open
+    .content-record-annotation-section-panel {
+    overflow: visible;
+    visibility: visible;
+    opacity: 1;
+    height: auto;
+    padding-top: var(--slds-g-spacing-xx-small, 0.25rem);
+    background-color: transparent;
+    border-top: none;
+}
+
+/* Chevron direction is driven by icon-name in JS (right = collapsed, down = expanded); do not rotate — rotation made "right" look like "up". */
+
+.content-record-annotation-section-heading-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--slds-g-font-weight-4, 400);
+}
+
+.content-record-annotation-section-toggle-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.content-record-annotation-section-link {
+    flex-shrink: 0;
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-6, 600);
+    line-height: 1.0625rem;
+    color: var(--slds-g-color-accent-2, #0250d9);
+    text-decoration: none;
+}
+
+.content-record-annotation-section-link_bar {
+    align-self: center;
+}
+
+.content-record-annotation-section-link:hover {
+    text-decoration: underline;
+}
+
+/* Linked Claims empty state — Figma (linked claims / library match) */
+.content-record-linked-claims-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    gap: var(--slds-g-spacing-medium, 1rem);
+    margin: 0;
+    padding: var(--slds-g-spacing-large, 1.5rem) var(--slds-g-spacing-medium, 1rem);
+    text-align: center;
+    background-color: transparent;
+    border-radius: 0;
+}
+
+.content-record-linked-claims-empty-message {
+    margin: 0;
+    max-width: 20rem;
+    color: var(--slds-g-color-on-surface-2, #5c5c5c);
+    line-height: var(--slds-g-line-height-4, 1.4);
+    font-size: var(--slds-g-font-scale-0, 0.8125rem);
+}
+
+.content-record-linked-claims-empty-cta {
+    --slds-c-button-radius-border: 15rem;
+    --slds-c-button-color-border: var(--slds-g-color-border-brand-1, #1b96ff);
+    --slds-c-button-text-color: var(--slds-g-color-brand-base-50, #0176d3);
+    --slds-c-button-color-background: var(--slds-g-color-surface-1, #ffffff);
+}
+
+.content-record-linked-claims-empty-cta:hover {
+    --slds-c-button-color-border: var(--slds-g-color-border-brand-2, #014486);
+}
+
+/* Figma 276:18379 — Mark as Anchor row: no top rule; rounds with card */
+.content-record-annotation-anchor {
+    display: block;
+    box-sizing: border-box;
+    padding: var(--slds-g-spacing-2, 0.5rem) var(--slds-g-spacing-4, 1rem);
+    margin: 0;
+    background-color: var(--slds-g-color-surface-1, #ffffff);
+    border-top: none;
+    border-bottom-left-radius: var(--slds-g-radius-border-3, 0.75rem);
+    border-bottom-right-radius: var(--slds-g-radius-border-3, 0.75rem);
+}
+
+/* Checkbox left, then label + info (4px apart) */
+.content-record-anchor-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    min-width: 0;
+}
+
+.content-record-anchor-label-cluster {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-1, 0.25rem); /* 4px to info icon (Figma) */
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+/* Field label: 13px / 18px (Figma) */
+.content-record-anchor-text {
+    margin: 0;
+    font-size: 0.8125rem; /* 13px — form field label */
+    line-height: 1.125rem; /* 18px */
+    font-weight: var(--slds-g-font-weight-4, 400);
+    color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.content-record-anchor-input {
+    --slds-c-input-line-height: 1.125rem;
+    flex-shrink: 0;
+}
+
+/* 12×12 blue utility info (no filled circle) */
+.content-record-annotation-info-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 0.75rem; /* 12px */
+    height: 0.75rem;
+    line-height: 0;
+}
+
+.content-record-annotation-info-icon lightning-icon {
+    --slds-c-icon-sizing: 0.75rem; /* 12px glyph box */
+    --slds-c-icon-color-foreground-default: var(--slds-g-color-brand-base-50, #066afe);
+    --slds-c-icon-color-background: transparent;
+}
+
+.content-record-annotations-empty {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    text-align: center;
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--slds-g-spacing-x-large, 2rem) var(--slds-g-spacing-large, 1.5rem);
+    max-width: 20rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.content-record-annotations-empty-illustration {
+    display: block;
+    flex-shrink: 0;
+    line-height: 0;
+    width: 100%;
+    max-width: 15rem;
+}
+
+.content-record-annotations-empty-image {
+    display: block;
+    width: 100%;
+    max-width: 15rem;
+    height: auto;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.content-record-annotations-empty-title {
+    color: var(--slds-g-color-on-surface-1, #181818);
+    margin: 0;
+    font-weight: var(--slds-g-font-weight-5, 500);
+}
+
+.content-record-annotations-empty-body {
+    margin: 0;
+    line-height: var(--slds-g-line-height-4, 1.4);
+    max-width: 100%;
+}
+
+@media (max-width: 1024px) {
+    .content-record-doc-layout {
+        flex-direction: column;
+    }
+
+    .content-record-splitter {
+        display: none;
+    }
+
+    .content-record-doc-sidebar {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        min-height: 0;
+        max-height: none;
+    }
+
+    .content-record-path-figma {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .content-record-path-rail {
+        flex-basis: auto;
+    }
+
+    .content-record-annotations-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

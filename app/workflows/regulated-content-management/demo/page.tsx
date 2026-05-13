@@ -2,594 +2,786 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import './rcm-exact.css';
+import './slds-base.css';
+import './contentRecordPage.css';
 
 interface Annotation {
   id: string;
-  annCode: string;
+  code: string;
+  snippetText: string;
   author: string;
-  timeAgo: string;
-  status: 'Pending' | 'Resolved';
-  snippet: string;
-  linkedClaimsCount: number;
-  commentsCount: number;
-  isAnchor: boolean;
-  expanded: boolean;
-  linkedClaims: Array<{ code: string; text: string }>;
-  comments: Array<{ author: string; text: string; timeAgo: string }>;
+  timestamp: string;
+  status: string;
+  comments: Comment[];
+  isExpanded: boolean;
+  isSelected: boolean;
+  linkedClaims?: LinkedClaim[];
 }
 
-export default function RCMExactDemo() {
-  const documentRef = useRef<HTMLDivElement>(null);
-  const [sidebarWidth, setSidebarWidth] = useState(400);
-  const [isDragging, setIsDragging] = useState(false);
-  const [currentStage, setCurrentStage] = useState(2); // 0=draft, 1=review, 2=approval, 3=published
-  const [activeTab, setActiveTab] = useState<'annotations' | 'workitems' | 'assistant'>('annotations');
-  const [annotateMode, setAnnotateMode] = useState(false);
-  const [annotateToolMode, setAnnotateToolMode] = useState<'highlight' | 'block' | null>(null);
+interface Comment {
+  id: string;
+  author: string;
+  text: string;
+  timestamp: string;
+}
+
+interface LinkedClaim {
+  id: string;
+  code: string;
+  text: string;
+}
+
+export default function RCMDemoPage() {
+  // State management
   const [annotations, setAnnotations] = useState<Annotation[]>([
     {
-      id: '001',
-      annCode: 'ANN-001',
-      author: 'Brittany Smith',
-      timeAgo: '2h ago',
-      status: 'Pending',
-      snippet: 'new outcome data showing how Immunexis is helping patients regain control faster',
-      linkedClaimsCount: 1,
-      commentsCount: 2,
-      isAnchor: true,
-      expanded: false,
-      linkedClaims: [{ code: 'CLAIM-2024-001', text: 'Clinical efficacy claim' }],
+      id: '1',
+      code: 'ANN-001',
+      snippetText:
+        'The primary endpoint of overall survival was met with statistical significance.',
+      author: 'Sarah Chen',
+      timestamp: '2 hours ago',
+      status: 'Open',
       comments: [
-        { author: 'Dr. Sarah Chen', text: 'Verify against Phase III data', timeAgo: '1h ago' },
-        { author: 'John Martinez', text: 'Documentation attached', timeAgo: '45m ago' },
+        {
+          id: 'c1',
+          author: 'Michael Torres',
+          text: 'Verify against statistical analysis plan.',
+          timestamp: '1 hour ago',
+        },
+      ],
+      isExpanded: false,
+      isSelected: false,
+      linkedClaims: [
+        {
+          id: 'cl1',
+          code: 'CLM-042',
+          text: 'Significantly improves overall survival',
+        },
       ],
     },
     {
-      id: '002',
-      annCode: 'ANN-002',
-      author: 'Michael Johnson',
-      timeAgo: '4h ago',
-      status: 'Resolved',
-      snippet: 'patients with moderate to severe arterial hypertension',
-      linkedClaimsCount: 0,
-      commentsCount: 1,
-      isAnchor: false,
-      expanded: false,
-      linkedClaims: [],
-      comments: [{ author: 'Emily Wilson', text: 'Approved', timeAgo: '3h ago' }],
+      id: '2',
+      code: 'ANN-002',
+      snippetText: 'Treatment-related adverse events were consistent with the known safety profile',
+      author: 'David Kumar',
+      timestamp: '3 hours ago',
+      status: 'In Review',
+      comments: [],
+      isExpanded: false,
+      isSelected: false,
     },
   ]);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [newComment, setNewComment] = useState('');
 
-  const stages = ['Draft', 'Review', 'Approval', 'Published'];
+  const [activeMainTab, setActiveMainTab] = useState('document');
+  const [activeSidebarTab, setActiveSidebarTab] = useState('annotations');
+  const [htmlAnnotateActive, setHtmlAnnotateActive] = useState(false);
+  const [htmlAnnotateMode, setHtmlAnnotateMode] = useState<'highlight' | 'block' | null>(null);
+  const [newCommentText, setNewCommentText] = useState<{ [key: string]: string }>({});
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(400);
+  const [isDraggingSplitter, setIsDraggingSplitter] = useState(false);
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging) return;
-    const newWidth = window.innerWidth - e.clientX;
-    if (newWidth >= 240 && newWidth <= 800) {
-      setSidebarWidth(newWidth);
-    }
-  };
+  const documentRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
+  // Path steps with proper state handling
+  const pathSteps = [
+    { stage: 'draft', label: 'Draft' },
+    { stage: 'review', label: 'Review' },
+    { stage: 'approve', label: 'Approve' },
+    { stage: 'archive', label: 'Archive' },
+  ];
+  const currentStage = 'review';
 
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove as any);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove as any);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging]);
+  const pathStepItems = pathSteps.map((s, i) => {
+    const isFirst = i === 0;
+    const isLast = i === pathSteps.length - 1;
+    const active = currentStage === s.stage;
+    const mod = isFirst ? 'content-path-seg_first' : isLast ? 'content-path-seg_last' : 'content-path-seg_middle';
 
-  const toggleAnnotation = (id: string) => {
-    setAnnotations((prev) =>
-      prev.map((ann) => (ann.id === id ? { ...ann, expanded: !ann.expanded } : ann))
-    );
-  };
+    return {
+      key: s.stage,
+      label: s.label,
+      showRightCap: !isLast,
+      segClass: [
+        'content-path-seg',
+        mod,
+        active ? 'content-path-seg_is-active' : ''
+      ]
+        .filter(Boolean)
+        .join(' '),
+      ariaCurrent: active ? ('step' as const) : null,
+      wrapStyle: { zIndex: pathSteps.length - i },
+    };
+  });
 
-  const toggleMenu = (id: string) => {
-    setOpenMenuId(openMenuId === id ? null : id);
-  };
-
+  // Handlers
   const handleAnnotateToggle = () => {
-    setAnnotateMode(!annotateMode);
-    if (annotateMode) {
-      setAnnotateToolMode(null);
+    setHtmlAnnotateActive(!htmlAnnotateActive);
+    if (htmlAnnotateActive) {
+      setHtmlAnnotateMode(null);
     }
+  };
+
+  const handleAnnotateModeHighlight = () => {
+    setHtmlAnnotateMode(htmlAnnotateMode === 'highlight' ? null : 'highlight');
+  };
+
+  const handleAnnotateModeBlock = () => {
+    setHtmlAnnotateMode(htmlAnnotateMode === 'block' ? null : 'block');
   };
 
   const handleTextSelection = () => {
-    if (!annotateMode || annotateToolMode !== 'highlight') return;
+    if (!htmlAnnotateActive || htmlAnnotateMode !== 'highlight') return;
 
     const selection = window.getSelection();
-    if (!selection || selection.toString().trim().length < 3) return;
+    if (!selection || selection.toString().trim().length === 0) return;
 
-    const text = selection.toString().trim();
-    const newAnn: Annotation = {
-      id: `${Date.now()}`,
-      annCode: `ANN-${String(annotations.length + 1).padStart(3, '0')}`,
-      author: 'You',
-      timeAgo: 'just now',
-      status: 'Pending',
-      snippet: text.substring(0, 80),
-      linkedClaimsCount: 0,
-      commentsCount: 0,
-      isAnchor: false,
-      expanded: true,
-      linkedClaims: [],
+    const selectedText = selection.toString().trim();
+    if (selectedText.length < 5) return;
+
+    const newAnnotation: Annotation = {
+      id: Date.now().toString(),
+      code: `ANN-${String(annotations.length + 1).padStart(3, '0')}`,
+      snippetText: selectedText,
+      author: 'Current User',
+      timestamp: 'Just now',
+      status: 'Open',
       comments: [],
+      isExpanded: true,
+      isSelected: false,
     };
 
-    setAnnotations((prev) => [newAnn, ...prev]);
-    window.getSelection()?.removeAllRanges();
+    setAnnotations([...annotations, newAnnotation]);
+    selection.removeAllRanges();
   };
 
-  const addComment = (annId: string) => {
-    if (!newComment.trim()) return;
+  const toggleAnnotationExpand = (id: string) => {
+    setAnnotations(
+      annotations.map((ann) =>
+        ann.id === id ? { ...ann, isExpanded: !ann.isExpanded } : ann
+      )
+    );
+  };
 
-    setAnnotations((prev) =>
-      prev.map((ann) =>
-        ann.id === annId
-          ? {
-              ...ann,
-              comments: [
-                ...ann.comments,
-                { author: 'You', text: newComment, timeAgo: 'just now' },
-              ],
-              commentsCount: ann.commentsCount + 1,
-            }
+  const selectAnnotation = (id: string) => {
+    setAnnotations(
+      annotations.map((ann) => ({ ...ann, isSelected: ann.id === id }))
+    );
+  };
+
+  const addComment = (annotationId: string) => {
+    const commentText = newCommentText[annotationId]?.trim();
+    if (!commentText) return;
+
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      author: 'Current User',
+      text: commentText,
+      timestamp: 'Just now',
+    };
+
+    setAnnotations(
+      annotations.map((ann) =>
+        ann.id === annotationId
+          ? { ...ann, comments: [...ann.comments, newComment] }
           : ann
       )
     );
-    setNewComment('');
+
+    setNewCommentText({ ...newCommentText, [annotationId]: '' });
   };
 
-  const toggleResolve = (annId: string) => {
-    setAnnotations((prev) =>
-      prev.map((ann) =>
-        ann.id === annId
-          ? { ...ann, status: ann.status === 'Pending' ? 'Resolved' : 'Pending' }
-          : ann
-      )
-    );
-    setOpenMenuId(null);
+  // Splitter resize
+  const handleSplitterPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDraggingSplitter(true);
   };
+
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!isDraggingSplitter) return;
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth >= 240 && newWidth <= 800) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handlePointerUp = () => {
+      setIsDraggingSplitter(false);
+    };
+
+    if (isDraggingSplitter) {
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', handlePointerUp);
+    }
+
+    return () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [isDraggingSplitter]);
 
   return (
-    <div className="rcm-exact-app">
-      {/* Demo Instructions Banner */}
-      <div style={{
-        background: '#d8edff',
-        borderBottom: '2px solid #0176d3',
-        padding: '1rem',
-        textAlign: 'center',
-      }}>
-        <p style={{ margin: 0, fontSize: '0.875rem', color: '#014486' }}>
-          <strong>🎯 Demo Instructions:</strong> Click "Annotate" button below → Click the highlight tool (pencil icon) → Select any text in the document to create an annotation
-        </p>
-      </div>
-
-      {/* Page Header */}
-      <div className="rcm-page-header-shell">
-        <Link href="/workflows" className="rcm-back-link">
-          ← Back to Workflows
-        </Link>
-
-        <div className="rcm-page-header">
-          <div className="rcm-page-header-main">
-            <div className="rcm-page-header-icon">
-              <svg width="20" height="20" fill="#0176d3" viewBox="0 0 24 24">
-                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
-              </svg>
-            </div>
-            <div className="rcm-page-header-titles">
-              <p className="rcm-eyebrow">Regulated Content</p>
-              <h1 className="rcm-page-title">Cordim Product Label - US Market</h1>
-            </div>
-          </div>
-          <div className="rcm-page-header-actions">
-            <button className="rcm-btn-neutral">Follow</button>
-            <button className="rcm-btn-neutral">Edit</button>
-            <button className="rcm-btn-neutral">Delete</button>
-          </div>
-        </div>
-
-        {/* Highlight Panel */}
-        <ul className="rcm-detail-row">
-          <li className="rcm-detail-block">
-            <label>Content Type</label>
-            <div>Product Label</div>
-          </li>
-          <li className="rcm-detail-block">
-            <label>Type</label>
-            <div>PDF</div>
-          </li>
-          <li className="rcm-detail-block">
-            <label>Version</label>
-            <div>2.1</div>
-          </li>
-          <li className="rcm-detail-block">
-            <label>Status</label>
-            <div>In Review</div>
-          </li>
-          <li className="rcm-detail-block">
-            <label>Effective Dates</label>
-            <div>Q2 2026</div>
-          </li>
-        </ul>
-
-        {/* Path */}
-        <div className="rcm-path-actions">
-          <div className="rcm-path-rail">
-            {stages.map((stage, idx) => (
-              <button
-                key={idx}
-                className={`rcm-path-seg ${idx < currentStage ? 'complete' : ''} ${idx === currentStage ? 'current' : ''}`}
-                onClick={() => setCurrentStage(idx)}
-              >
-                {stage}
-              </button>
-            ))}
-          </div>
-          <button className="rcm-btn-brand">
-            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style={{ marginRight: '6px' }}>
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-            Extract &amp; Match Claims
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="rcm-article">
-        <div className="rcm-doc-layout">
-          {/* Document Viewer */}
-          <div className="rcm-doc-main" style={{ width: `calc(100% - ${sidebarWidth}px - 8px)` }}>
-            {/* Toolbar */}
-            <div className="rcm-viewer-toolbar">
-              <div className="rcm-toolbar-row">
-                <div className="rcm-file-title">
-                  <svg width="16" height="16" fill="#5c5c5c" viewBox="0 0 24 24">
-                    <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
+    <article className="slds-card content-record-page-card">
+      <div className="content-record-page-inner">
+        {/* Hero: Header + Path */}
+        <div className="content-record-hero">
+          {/* Page Header Shell */}
+          <div className="content-record-page-header-shell">
+            <div className="content-record-page-header">
+              <div className="content-record-page-header-main">
+                <div className="content-record-page-header-icon" aria-hidden="true">
+                  <svg className="content-record-header-doc-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M5 2h7l3 3v13H5V2z" fillOpacity="0.7" />
+                    <path d="M12 2v3h3z" fillOpacity="0.5" />
                   </svg>
-                  <span>cordim-label-us.pdf</span>
                 </div>
-                <div className="rcm-toolbar-actions">
-                  <button className="rcm-btn-neutral">Download</button>
-                  <button className="rcm-icon-btn">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
-                      <circle cx="12" cy="5" r="2" />
-                      <circle cx="12" cy="12" r="2" />
-                      <circle cx="12" cy="19" r="2" />
-                    </svg>
-                  </button>
+                <div className="content-record-page-header-titles">
+                  <p className="content-record-eyebrow">Clinical Trial Report</p>
+                  <h1 className="content-record-page-title">Immunexis Phase III Trial Results</h1>
                 </div>
               </div>
-
-              {/* Annotate Toolbar */}
-              <div className="rcm-html-annotate-row">
-                <div className="rcm-annotate-start">
-                  <button
-                    className={annotateMode ? 'rcm-btn-brand' : 'rcm-btn-neutral'}
-                    onClick={handleAnnotateToggle}
-                  >
-                    Annotate
-                  </button>
-                  {annotateMode && (
-                    <div className="rcm-annotate-tools">
-                      <button
-                        className={`rcm-tool-btn ${annotateToolMode === 'highlight' ? 'active' : ''}`}
-                        onClick={() => setAnnotateToolMode('highlight')}
-                        title="Text highlight"
-                      >
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M6 14l3 3-6 6h6l6-6-3-3M3.5 12.5l9-9L16 7l-9 9-3.5-3.5z" />
-                        </svg>
-                      </button>
-                      <button
-                        className={`rcm-tool-btn ${annotateToolMode === 'block' ? 'active' : ''}`}
-                        onClick={() => setAnnotateToolMode('block')}
-                        title="Select page element for block"
-                      >
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM4 19V5h16v14H4z" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
+              <div className="content-record-page-header-actions" role="group" aria-label="Record actions">
+                <Link
+                  href="/workflows"
+                  className="slds-button slds-button_neutral"
+                  style={{ textDecoration: 'none' }}
+                >
+                  ← Back
+                </Link>
+                <button className="slds-button slds-button_brand-outline">Follow</button>
+                <div className="slds-button-group" role="group">
+                  <button className="slds-button slds-button_neutral">Edit</button>
+                  <button className="slds-button slds-button_neutral">Delete</button>
+                  <button className="slds-button slds-button_neutral">Clone</button>
                 </div>
-                <p className="rcm-annotate-hint">
-                  Text: drag to select. Block: use the page tool—hover a region for a grey preview, then click; yellow shows your saved marks.
-                </p>
-              </div>
-
-              {/* Paging Row */}
-              <div className="rcm-toolbar-row rcm-paging-row">
-                <div className="rcm-paging">
-                  <button className="rcm-icon-btn">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                    </svg>
-                  </button>
-                  <button className="rcm-icon-btn">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                    </svg>
-                  </button>
-                  <span className="rcm-page-indicator">1 of 5</span>
-                  <button className="rcm-icon-btn">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" />
-                    </svg>
-                  </button>
-                  <button className="rcm-icon-btn">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="rcm-viewer-tools">
-                  <button className="rcm-icon-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-                    </svg>
-                  </button>
-                  <button className="rcm-icon-btn">+</button>
-                  <button className="rcm-icon-btn">−</button>
-                  <select className="rcm-zoom-combo">
-                    <option>100%</option>
-                    <option>125%</option>
-                    <option>150%</option>
-                  </select>
-                </div>
+                <button className="slds-button slds-button_icon slds-button_icon-border-filled" title="More actions">
+                  <span className="slds-icon_container">⋯</span>
+                </button>
               </div>
             </div>
-
-            {/* Document */}
-            <div className="rcm-document-preview">
-              <div
-                ref={documentRef}
-                className={`rcm-document-content ${annotateMode && annotateToolMode === 'highlight' ? 'annotate-active' : ''}`}
-                onMouseUp={handleTextSelection}
-              >
-                {annotateMode && annotateToolMode === 'highlight' && (
-                  <div style={{
-                    padding: '1rem',
-                    background: '#fff3cd',
-                    border: '2px solid #ffc107',
-                    borderRadius: '0.25rem',
-                    marginBottom: '1.5rem',
-                    textAlign: 'center',
-                  }}>
-                    <strong style={{ color: '#856404' }}>✨ Annotation Mode Active!</strong>
-                    <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem', color: '#856404' }}>
-                      Select any text below to create an annotation
-                    </p>
-                  </div>
-                )}
-
-                <h1 className="doc-title">CORDIM® (Cordimetrix Hydrochloride)</h1>
-
-                <section className="doc-section">
-                  <h2 className="doc-heading">INDICATIONS AND USAGE</h2>
-                  <p className="doc-text">
-                    Cordim is indicated for the treatment of arterial hypertension in adults to lower blood pressure.
-                    Lowering blood pressure reduces the risk of fatal and nonfatal cardiovascular events, primarily
-                    strokes and myocardial infarctions.
-                  </p>
-                </section>
-
-                <section className="doc-section">
-                  <h2 className="doc-heading">DOSAGE AND ADMINISTRATION</h2>
-                  <p className="doc-text">
-                    The recommended starting dose is 5 mg once daily. Depending on patient response, the dose may be
-                    increased to a maximum of 10 mg once daily.
-                  </p>
-                </section>
-
-                <section className="doc-section">
-                  <h2 className="doc-heading">CLINICAL PHARMACOLOGY</h2>
-                  <p className="doc-text">
-                    Clinical efficacy was demonstrated in Phase III trials with 1,200+ patients. Cordim showed
-                    significant blood pressure reduction compared to placebo (p &lt; 0.001).
-                  </p>
-                </section>
+            {/* Highlight Panel */}
+            <div className="content-record-highlight-panel" role="group" aria-label="Key fields">
+              <div className="content-record-highlight-field">
+                <span className="content-record-highlight-label">Content Type</span>
+                <span className="content-record-highlight-value">Clinical Trial Report</span>
+              </div>
+              <div className="content-record-highlight-field">
+                <span className="content-record-highlight-label">Type</span>
+                <span className="content-record-highlight-value">PDF Document</span>
+              </div>
+              <div className="content-record-highlight-field">
+                <span className="content-record-highlight-label">Version</span>
+                <span className="content-record-highlight-value">2.1</span>
+              </div>
+              <div className="content-record-highlight-field">
+                <span className="content-record-highlight-label">Status</span>
+                <span className="content-record-highlight-value">In Review</span>
+              </div>
+              <div className="content-record-highlight-field">
+                <span className="content-record-highlight-label">Effective Dates</span>
+                <span className="content-record-highlight-value">Jan 2024 - Dec 2026</span>
               </div>
             </div>
           </div>
 
-          {/* Splitter */}
-          <div
-            className="rcm-splitter"
-            onMouseDown={() => setIsDragging(true)}
-          />
+          {/* Path Actions */}
+          <div className="content-record-path-actions">
+            <div className="content-record-path-figma">
+              <div className="content-record-path-rail" role="group" aria-label="Content workflow stages">
+                <div className="content-record-path-stages" role="presentation">
+                  {pathStepItems.map((st) => (
+                    <div
+                      key={st.key}
+                      className="content-path-seg-wrap"
+                      data-step={st.key}
+                      style={st.wrapStyle}
+                    >
+                      <div className={st.segClass} role="presentation">
+                        <div className="content-path-seg__stage">
+                          <span className="content-path-seg-label" aria-current={st.ariaCurrent || undefined}>
+                            {st.label}
+                          </span>
+                        </div>
+                        {st.showRightCap && (
+                          <div className="content-path-seg__end content-path-seg__end_right" aria-hidden="true"></div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button className="slds-button slds-button_brand-outline content-record-extract-btn">
+                <span className="slds-icon_container" style={{ marginRight: '0.5rem' }}>✨</span>
+                Extract & Match Claims
+              </button>
+              <div className="content-record-send-split slds-button-group" role="group" aria-label="Send for review">
+                <button className="slds-button slds-button_neutral content-record-btn-send-review">
+                  Send for review
+                </button>
+                <button
+                  className="slds-button slds-button_icon slds-button_icon-border-filled content-record-btn-send-review-chevron"
+                  title="More send options"
+                >
+                  <span className="slds-icon_container">▾</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-          {/* Sidebar */}
-          <aside className="rcm-doc-sidebar" style={{ width: `${sidebarWidth}px` }}>
-            {/* Scoped Tabs */}
-            <div className="slds-tabs_scoped">
-              <ul className="slds-tabs_scoped__nav" role="tablist">
-                <li className={`slds-tabs_scoped__item ${activeTab === 'annotations' ? 'slds-is-active' : ''}`}>
-                  <a className="slds-tabs_scoped__link" onClick={() => setActiveTab('annotations')}>
-                    Annotations ({annotations.length})
-                  </a>
-                </li>
-                <li className={`slds-tabs_scoped__item ${activeTab === 'workitems' ? 'slds-is-active' : ''}`}>
-                  <a className="slds-tabs_scoped__link" onClick={() => setActiveTab('workitems')}>
-                    Content Work Items
-                  </a>
-                </li>
-                <li className={`slds-tabs_scoped__item ${activeTab === 'assistant' ? 'slds-is-active' : ''}`}>
-                  <a className="slds-tabs_scoped__link" onClick={() => setActiveTab('assistant')}>
-                    Content Assistant
-                  </a>
-                </li>
-              </ul>
+        {/* Article: Main Tabs */}
+        <div className="content-record-article">
+          <div className="content-record-main-tabset">
+            {/* Tab nav */}
+            <ul className="slds-tabs_default__nav" role="tablist">
+              <li
+                className={`slds-tabs_default__item ${activeMainTab === 'document' ? 'slds-is-active' : ''}`}
+                role="presentation"
+              >
+                <a
+                  className="slds-tabs_default__link"
+                  role="tab"
+                  onClick={() => setActiveMainTab('document')}
+                  aria-selected={activeMainTab === 'document'}
+                >
+                  Document
+                </a>
+              </li>
+              <li
+                className={`slds-tabs_default__item ${activeMainTab === 'related' ? 'slds-is-active' : ''}`}
+                role="presentation"
+              >
+                <a
+                  className="slds-tabs_default__link"
+                  role="tab"
+                  onClick={() => setActiveMainTab('related')}
+                  aria-selected={activeMainTab === 'related'}
+                >
+                  Related
+                </a>
+              </li>
+              <li
+                className={`slds-tabs_default__item ${activeMainTab === 'activity' ? 'slds-is-active' : ''}`}
+                role="presentation"
+              >
+                <a
+                  className="slds-tabs_default__link"
+                  role="tab"
+                  onClick={() => setActiveMainTab('activity')}
+                  aria-selected={activeMainTab === 'activity'}
+                >
+                  Activity
+                </a>
+              </li>
+            </ul>
 
-              <div className="slds-tabs_scoped__content">
-                {activeTab === 'annotations' && (
-                  <div className="rcm-annotations-panel">
-                    <div className="rcm-annotations-list">
-                      {annotations.map((ann) => (
-                        <div key={ann.id} className="rcm-annotation-card">
-                          {/* Header */}
-                          <div className="rcm-ann-header">
-                            <button className="rcm-ann-chevron" onClick={() => toggleAnnotation(ann.id)}>
-                              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
-                                {ann.expanded ? (
-                                  <path d="M7 10l5 5 5-5z" />
-                                ) : (
-                                  <path d="M10 17l5-5-5-5v10z" />
-                                )}
-                              </svg>
-                            </button>
-                            <div className="rcm-ann-title-cluster">
-                              <p className="rcm-ann-code">{ann.annCode}</p>
-                              {ann.isAnchor && (
-                                <span className="rcm-anchor-badge" title="Marked as anchor">⚓</span>
-                              )}
-                            </div>
-                            <div className="rcm-ann-more-wrap">
-                              <button className="rcm-ann-more" onClick={() => toggleMenu(ann.id)}>
-                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
-                                  <circle cx="12" cy="5" r="2" />
-                                  <circle cx="12" cy="12" r="2" />
-                                  <circle cx="12" cy="19" r="2" />
-                                </svg>
+            {/* Tab panels */}
+            {activeMainTab === 'document' && (
+              <div className="content-record-tab-panel content-record-tab-panel_document">
+                <div className="content-record-doc-layout">
+                  {/* Document Main */}
+                  <div className="content-record-doc-main">
+                    {/* Viewer Toolbar */}
+                    <div className="content-record-viewer-toolbar">
+                      <div className="content-record-viewer-toolbar-row">
+                        <div className="content-record-file-title">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ opacity: 0.7 }}>
+                            <path d="M4 2h5l3 3v9H4V2z" />
+                          </svg>
+                          <span className="content-record-file-name">immunexis-clinical-trial.pdf</span>
+                        </div>
+                        <div className="content-record-viewer-toolbar-actions">
+                          <button className="slds-button slds-button_neutral">
+                            <span className="slds-icon_container" style={{ marginRight: '0.25rem' }}>⬇</span>
+                            Download
+                          </button>
+                          <button className="slds-button slds-button_icon slds-button_icon-border-filled" title="More">
+                            <span className="slds-icon_container">⋯</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* HTML Annotate Row */}
+                      <div className="content-record-viewer-toolbar-row content-record-html-annotate-row" role="toolbar">
+                        <div className="content-record-html-annotate-start">
+                          <button
+                            className={`slds-button ${htmlAnnotateActive ? 'slds-button_brand' : 'slds-button_neutral'} content-record-html-annotate-action`}
+                            onClick={handleAnnotateToggle}
+                            title="Turn on Annotate, pick a tool, then select text or click a block"
+                          >
+                            Annotate
+                          </button>
+                          {htmlAnnotateActive && (
+                            <div className="content-record-html-annotate-tools" role="group" aria-label="Annotation tools">
+                              <button
+                                className={`slds-button slds-button_icon ${htmlAnnotateMode === 'highlight' ? 'slds-button_icon-brand' : 'slds-button_icon-border-filled'}`}
+                                onClick={handleAnnotateModeHighlight}
+                                title="Drag to select text"
+                              >
+                                <span className="slds-icon_container">🖍</span>
                               </button>
-                              {openMenuId === ann.id && (
-                                <div className="rcm-ann-dropdown">
-                                  <button>Copy link</button>
-                                  <button>Edit</button>
-                                  <button>Delete</button>
-                                  <button onClick={() => toggleResolve(ann.id)}>
-                                    {ann.status === 'Resolved' ? 'Unresolve' : 'Resolve'}
-                                  </button>
-                                  <button>Assign to...</button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Meta */}
-                          <div className="rcm-ann-meta">
-                            <svg width="12" height="12" fill="#706e6b" viewBox="0 0 24 24">
-                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                            </svg>
-                            <a className="rcm-ann-author">{ann.author}</a>
-                            <span className="rcm-ann-dot">·</span>
-                            <span className="rcm-ann-time">{ann.timeAgo}</span>
-                            <span className="rcm-ann-dot">·</span>
-                            <span className="rcm-ann-status">{ann.status}</span>
-                          </div>
-
-                          {/* Collapsed Badges */}
-                          {!ann.expanded && (
-                            <div className="rcm-collapsed-badges">
-                              {ann.linkedClaimsCount > 0 && (
-                                <button className="rcm-figma-badge">
-                                  {ann.linkedClaimsCount} linked claim{ann.linkedClaimsCount !== 1 ? 's' : ''}
-                                </button>
-                              )}
-                              {ann.commentsCount > 0 && (
-                                <button className="rcm-figma-badge">
-                                  {ann.commentsCount} comment{ann.commentsCount !== 1 ? 's' : ''}
-                                </button>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Expanded Body */}
-                          {ann.expanded && (
-                            <div className="rcm-ann-body">
-                              <div className="rcm-ann-snippet">
-                                <span className="rcm-snippet-quote">&quot;{ann.snippet}&quot;</span>
-                              </div>
-
-                              {/* Linked Claims Section */}
-                              <div className="rcm-ann-section">
-                                <h3 className="rcm-section-heading">
-                                  <span>Linked Claims ({ann.linkedClaimsCount})</span>
-                                  <a className="rcm-section-link">Link Claim</a>
-                                </h3>
-                                {ann.linkedClaims.length > 0 && (
-                                  <div className="rcm-linked-list">
-                                    {ann.linkedClaims.map((lc) => (
-                                      <div key={lc.code} className="rcm-linked-item">
-                                        <svg width="14" height="14" fill="#0176d3" viewBox="0 0 24 24">
-                                          <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
-                                        </svg>
-                                        <a className="rcm-claim-code">{lc.code}</a>
-                                        <span className="rcm-claim-text">{lc.text}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Comments Section */}
-                              <div className="rcm-ann-section">
-                                <h3 className="rcm-section-heading">
-                                  <span>Comments ({ann.commentsCount})</span>
-                                </h3>
-                                <div className="rcm-comments-list">
-                                  {ann.comments.map((comment, idx) => (
-                                    <div key={idx} className="rcm-comment">
-                                      <div className="rcm-comment-header">
-                                        <strong>{comment.author}</strong>
-                                        <span>{comment.timeAgo}</span>
-                                      </div>
-                                      <p className="rcm-comment-text">{comment.text}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                                <textarea
-                                  className="rcm-comment-input"
-                                  placeholder="Write a comment..."
-                                  value={newComment}
-                                  onChange={(e) => setNewComment(e.target.value)}
-                                  rows={3}
-                                />
-                                <button
-                                  className="rcm-btn-brand rcm-btn-sm"
-                                  onClick={() => addComment(ann.id)}
-                                >
-                                  Add Comment
-                                </button>
-                              </div>
+                              <button
+                                className={`slds-button slds-button_icon ${htmlAnnotateMode === 'block' ? 'slds-button_icon-brand' : 'slds-button_icon-border-filled'}`}
+                                onClick={handleAnnotateModeBlock}
+                                title="Select page element for block"
+                              >
+                                <span className="slds-icon_container">▢</span>
+                              </button>
                             </div>
                           )}
                         </div>
-                      ))}
+                        <p className="content-record-html-annotate-hint slds-text-body_small slds-text-color_weak slds-m-left_small">
+                          Text: drag to select. Block: use the page tool—hover a region for a grey preview, then click; yellow shows your saved marks.
+                        </p>
+                      </div>
+
+                      {/* Paging Row */}
+                      <div className="content-record-viewer-toolbar-row content-record-viewer-toolbar-row_paging">
+                        <div className="content-record-paging">
+                          <button className="slds-button slds-button_icon slds-button_icon-border-filled" title="Previous">
+                            <span className="slds-icon_container">‹</span>
+                          </button>
+                          <span className="content-record-page-indicator">Page 1 of 7</span>
+                          <button className="slds-button slds-button_icon slds-button_icon-border-filled" title="Next">
+                            <span className="slds-icon_container">›</span>
+                          </button>
+                        </div>
+                        <div className="content-record-viewer-tools">
+                          <button className="slds-button slds-button_icon slds-button_icon-border-filled" title="Zoom out">
+                            <span className="slds-icon_container">−</span>
+                          </button>
+                          <select className="slds-select content-record-zoom-combo">
+                            <option>100%</option>
+                            <option>125%</option>
+                            <option>150%</option>
+                            <option>200%</option>
+                          </select>
+                          <button className="slds-button slds-button_icon slds-button_icon-border-filled" title="Zoom in">
+                            <span className="slds-icon_container">+</span>
+                          </button>
+                          <button className="slds-button slds-button_icon slds-button_icon-border-filled" title="Fit">
+                            <span className="slds-icon_container">⤢</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Document Preview */}
+                    <div
+                      ref={documentRef}
+                      className="content-record-document-preview"
+                      onMouseUp={handleTextSelection}
+                      style={{
+                        cursor: htmlAnnotateActive
+                          ? htmlAnnotateMode === 'highlight'
+                            ? 'text'
+                            : htmlAnnotateMode === 'block'
+                              ? 'crosshair'
+                              : 'default'
+                          : 'default',
+                      }}
+                    >
+                      <iframe
+                        src="/documents/immunexis-clinical-trial.pdf"
+                        className="content-record-pdf-frame"
+                        title="Clinical Trial Document"
+                      />
                     </div>
                   </div>
-                )}
 
-                {activeTab === 'workitems' && (
-                  <div className="rcm-empty-state">
-                    <img src="/api/placeholder/80/80" alt="" className="rcm-empty-img" />
-                    <p>No work items assigned</p>
-                  </div>
-                )}
+                  {/* Splitter */}
+                  <div
+                    className="content-record-splitter"
+                    role="separator"
+                    tabIndex={0}
+                    aria-orientation="vertical"
+                    aria-label="Resize annotation panel"
+                    aria-valuenow={sidebarWidth}
+                    aria-valuemin={240}
+                    aria-valuemax={800}
+                    title="Drag to resize panels"
+                    onPointerDown={handleSplitterPointerDown}
+                    style={{ cursor: 'col-resize' }}
+                  />
 
-                {activeTab === 'assistant' && (
-                  <div className="rcm-empty-state">
-                    <p>Content Assistant</p>
-                    <p className="rcm-empty-subtitle">AI-powered content analysis</p>
-                  </div>
-                )}
+                  {/* Sidebar */}
+                  <aside className="content-record-doc-sidebar" style={{ width: `${sidebarWidth}px` }} aria-label="Document tools and annotations">
+                    <div className="content-record-scoped-shell">
+                      <div className="slds-tabs_scoped content-record-scoped-tabs" role="region" aria-label="Document tools">
+                        {/* Sidebar tabs nav */}
+                        <ul className="slds-tabs_scoped__nav" role="tablist" aria-label="Panel sections">
+                          <li
+                            className={`slds-tabs_scoped__item ${activeSidebarTab === 'annotations' ? 'slds-is-active' : ''}`}
+                            role="presentation"
+                            title="Annotations"
+                          >
+                            <a
+                              className="slds-tabs_scoped__link"
+                              href="#"
+                              role="tab"
+                              aria-selected={activeSidebarTab === 'annotations'}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setActiveSidebarTab('annotations');
+                              }}
+                            >
+                              Annotations ({annotations.length})
+                            </a>
+                          </li>
+                          <li
+                            className={`slds-tabs_scoped__item ${activeSidebarTab === 'claims' ? 'slds-is-active' : ''}`}
+                            role="presentation"
+                            title="Content Work items"
+                          >
+                            <a
+                              className="slds-tabs_scoped__link"
+                              href="#"
+                              role="tab"
+                              aria-selected={activeSidebarTab === 'claims'}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setActiveSidebarTab('claims');
+                              }}
+                            >
+                              Claims
+                            </a>
+                          </li>
+                        </ul>
+
+                        {/* Sidebar content */}
+                        <div className="content-record-scoped-panels">
+                          {activeSidebarTab === 'annotations' && (
+                            <div className="content-record-annotations-panel">
+                              {annotations.length === 0 ? (
+                                <div className="content-record-annotations-empty">
+                                  <div className="content-record-annotations-empty-illustration">
+                                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
+                                  </div>
+                                  <h3 className="content-record-annotations-empty-title">No annotations yet</h3>
+                                  <p className="content-record-annotations-empty-body slds-text-body_small">Click "Annotate" to add your first annotation</p>
+                                </div>
+                              ) : (
+                                <ul className="content-record-annotations-list">
+                                  {annotations.map((ann) => (
+                                    <li
+                                      key={ann.id}
+                                      className={`content-record-annotation-card ${ann.isExpanded ? 'content-record-annotation-card_is-expanded' : ''} ${ann.isSelected ? 'content-record-annotation-card_is-selected' : ''}`}
+                                      onClick={() => selectAnnotation(ann.id)}
+                                    >
+                                      {/* Header */}
+                                      <div className="content-record-annotation-header">
+                                        <button
+                                          className="content-record-annotation-chevron"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleAnnotationExpand(ann.id);
+                                          }}
+                                          aria-label={ann.isExpanded ? 'Collapse' : 'Expand'}
+                                        >
+                                          <span className="content-record-annotation-chevron-icon">
+                                            {ann.isExpanded ? '▼' : '▶'}
+                                          </span>
+                                        </button>
+                                        <div className="content-record-annotation-title-cluster">
+                                          <p className="content-record-annotation-ann-code">{ann.code}</p>
+                                          <img
+                                            src="data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='%235c5c5c' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 2L9 7L7 12L5 7L7 2Z'/%3E%3C/svg%3E"
+                                            alt="anchor"
+                                            className="content-record-annotation-anchor-badge__img"
+                                          />
+                                        </div>
+                                        <div className="content-record-annotation-more-wrap">
+                                          <button
+                                            className="content-record-annotation-more"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDropdownOpen(dropdownOpen === ann.id ? null : ann.id);
+                                            }}
+                                            aria-label="More actions"
+                                          >
+                                            <span className="content-record-annotation-more-icon">⋯</span>
+                                          </button>
+                                          {dropdownOpen === ann.id && (
+                                            <div className="content-record-annotation-dropdown">
+                                              <button className="content-record-annotation-menu-item">Edit</button>
+                                              <button className="content-record-annotation-menu-item">Delete</button>
+                                              <button className="content-record-annotation-menu-item">Share</button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Meta */}
+                                      <div className="content-record-annotation-meta">
+                                        <a href="#" className="content-record-annotation-author" onClick={(e) => e.preventDefault()}>
+                                          {ann.author}
+                                        </a>
+                                        <span className="content-record-annotation-dot">•</span>
+                                        <span className="content-record-annotation-time">{ann.timestamp}</span>
+                                        <span className="content-record-annotation-dot">•</span>
+                                        <span className="content-record-annotation-status-text">{ann.status}</span>
+                                      </div>
+
+                                      {/* Collapsed badges */}
+                                      {!ann.isExpanded && (
+                                        <div className="content-record-annotation-collapsed-badges">
+                                          {ann.comments.length > 0 && (
+                                            <span className="content-record-annotation-figma-badge">
+                                              💬 {ann.comments.length}
+                                            </span>
+                                          )}
+                                          {ann.linkedClaims && ann.linkedClaims.length > 0 && (
+                                            <span className="content-record-annotation-figma-badge">
+                                              🔗 {ann.linkedClaims.length}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Expanded body */}
+                                      {ann.isExpanded && (
+                                        <div className="content-record-annotation-body">
+                                          {/* Snippet */}
+                                          <div className="content-record-annotation-snippet">
+                                            <p className="content-record-annotation-snippet-quote">"{ann.snippetText}"</p>
+                                          </div>
+
+                                          {/* Linked Claims */}
+                                          {ann.linkedClaims && ann.linkedClaims.length > 0 && (
+                                            <div className="content-record-annotation-expandable-slot">
+                                              <div className="content-record-annotation-section-shell content-record-annotation-section-shell_open">
+                                                <div className="content-record-annotation-section-bar">
+                                                  <div className="content-record-annotation-section-heading">
+                                                    <span className="content-record-annotation-section-heading-text">
+                                                      Linked Claims ({ann.linkedClaims.length})
+                                                    </span>
+                                                  </div>
+                                                  <a href="#" className="content-record-annotation-section-link content-record-annotation-section-link_bar" onClick={(e) => e.preventDefault()}>
+                                                    View all
+                                                  </a>
+                                                </div>
+                                                <div className="content-record-annotation-section-panel">
+                                                  <div className="content-record-annotation-linked-list">
+                                                    {ann.linkedClaims.map((claim) => (
+                                                      <div key={claim.id} className="content-record-annotation-linked-row">
+                                                        <a href="#" className="content-record-annotation-linked-code" onClick={(e) => e.preventDefault()}>
+                                                          {claim.code}
+                                                        </a>
+                                                        <span className="content-record-annotation-linked-spacer">{claim.text}</span>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* Comments */}
+                                          <div className="content-record-annotation-expandable-slot">
+                                            <div className="content-record-annotation-section-shell content-record-annotation-section-shell_open">
+                                              <div className="content-record-annotation-section-bar">
+                                                <div className="content-record-annotation-section-heading">
+                                                  <span className="content-record-annotation-section-heading-text">
+                                                    Comments ({ann.comments.length})
+                                                  </span>
+                                                </div>
+                                              </div>
+                                              <div className="content-record-annotation-section-panel">
+                                                {ann.comments.length > 0 && (
+                                                  <div className="content-record-annotation-comments-list">
+                                                    {ann.comments.map((comment) => (
+                                                      <div key={comment.id} className="content-record-annotation-comment">
+                                                        <div className="content-record-annotation-comment-hdr">
+                                                          <div className="content-record-annotation-comment-avatar content-record-annotation-comment-avatar_brand">
+                                                            <span style={{ fontSize: '0.5rem', color: 'white' }}>👤</span>
+                                                          </div>
+                                                          <a href="#" className="content-record-annotation-author content-record-annotation-author_comment" onClick={(e) => e.preventDefault()}>
+                                                            {comment.author}
+                                                          </a>
+                                                          <span className="content-record-annotation-dot">•</span>
+                                                          <span className="content-record-annotation-time">{comment.timestamp}</span>
+                                                        </div>
+                                                        <p className="content-record-annotation-comment-body">{comment.text}</p>
+                                                        <div className="content-record-annotation-comment-divider" />
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                                <div className="content-record-annotation-composer">
+                                                  <textarea
+                                                    className="slds-textarea content-record-annotation-composer-field"
+                                                    placeholder="Add a comment..."
+                                                    rows={3}
+                                                    value={newCommentText[ann.id] || ''}
+                                                    onChange={(e) =>
+                                                      setNewCommentText({
+                                                        ...newCommentText,
+                                                        [ann.id]: e.target.value,
+                                                      })
+                                                    }
+                                                    onClick={(e) => e.stopPropagation()}
+                                                  />
+                                                  <div className="content-record-annotation-composer-actions">
+                                                    <button
+                                                      className="slds-button slds-button_brand"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        addComment(ann.id);
+                                                      }}
+                                                    >
+                                                      Post
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+
+                          {activeSidebarTab === 'claims' && (
+                            <div className="content-record-annotations-empty">
+                              <div className="content-record-annotations-empty-illustration">
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔗</div>
+                              </div>
+                              <h3 className="content-record-annotations-empty-title">No claims extracted yet</h3>
+                              <p className="content-record-annotations-empty-body slds-text-body_small">
+                                Click "Extract & Match Claims" to begin
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </aside>
+                </div>
               </div>
-            </div>
-          </aside>
+            )}
+
+            {activeMainTab === 'related' && (
+              <div className="content-record-tab-panel" style={{ padding: '1rem' }}>
+                <h3 className="content-record-related-title">Related Records</h3>
+                <p className="content-record-empty">No related records</p>
+              </div>
+            )}
+
+            {activeMainTab === 'activity' && (
+              <div className="content-record-tab-panel" style={{ padding: '1rem' }}>
+                <h3 className="content-record-related-title">Activity Timeline</h3>
+                <p className="content-record-empty">No recent activity</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
