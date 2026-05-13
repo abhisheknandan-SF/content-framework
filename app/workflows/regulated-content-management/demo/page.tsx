@@ -2,59 +2,68 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import './rcm-styles.css';
+import './rcm-exact.css';
 
 interface Annotation {
   id: string;
-  kind: 'highlight' | 'block';
-  text: string;
-  snippet: string;
+  annCode: string;
   author: string;
   timeAgo: string;
   status: 'Pending' | 'Resolved';
-  linkedClaim?: string;
-  isAnchor?: boolean;
-  comments: Array<{
-    id: string;
-    text: string;
-    author: string;
-    timeAgo: string;
-  }>;
+  snippet: string;
+  linkedClaimsCount: number;
+  commentsCount: number;
+  isAnchor: boolean;
+  expanded: boolean;
+  linkedClaims: Array<{ code: string; text: string }>;
+  comments: Array<{ author: string; text: string; timeAgo: string }>;
 }
 
-export default function RCMDemo() {
+export default function RCMExactDemo() {
   const documentRef = useRef<HTMLDivElement>(null);
   const [sidebarWidth, setSidebarWidth] = useState(400);
   const [isDragging, setIsDragging] = useState(false);
-  const [currentStage, setCurrentStage] = useState<'draft' | 'review' | 'approval' | 'published'>('review');
+  const [currentStage, setCurrentStage] = useState(2); // 0=draft, 1=review, 2=approval, 3=published
   const [activeTab, setActiveTab] = useState<'annotations' | 'workitems' | 'assistant'>('annotations');
+  const [annotateMode, setAnnotateMode] = useState(false);
+  const [annotateToolMode, setAnnotateToolMode] = useState<'highlight' | 'block' | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([
     {
       id: '001',
-      kind: 'highlight',
+      annCode: 'ANN-001',
       author: 'Brittany Smith',
       timeAgo: '2h ago',
-      text: 'new outcome data showing how Immunexis is helping patients regain control faster',
-      snippet: '...new outcome data showing how Immunexis is helping patients regain control faster....',
       status: 'Pending',
-      linkedClaim: 'CLAIM-2024-001',
+      snippet: 'new outcome data showing how Immunexis is helping patients regain control faster',
+      linkedClaimsCount: 1,
+      commentsCount: 2,
       isAnchor: true,
+      expanded: false,
+      linkedClaims: [{ code: 'CLAIM-2024-001', text: 'Clinical efficacy claim' }],
       comments: [
-        { id: 'c1', text: 'Verify against Phase III data', author: 'Dr. Chen', timeAgo: '1h ago' },
+        { author: 'Dr. Sarah Chen', text: 'Verify against Phase III data', timeAgo: '1h ago' },
+        { author: 'John Martinez', text: 'Documentation attached', timeAgo: '45m ago' },
       ],
     },
+    {
+      id: '002',
+      annCode: 'ANN-002',
+      author: 'Michael Johnson',
+      timeAgo: '4h ago',
+      status: 'Resolved',
+      snippet: 'patients with moderate to severe arterial hypertension',
+      linkedClaimsCount: 0,
+      commentsCount: 1,
+      isAnchor: false,
+      expanded: false,
+      linkedClaims: [],
+      comments: [{ author: 'Emily Wilson', text: 'Approved', timeAgo: '3h ago' }],
+    },
   ]);
-  const [expandedAnnotation, setExpandedAnnotation] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
-  const [showSelectionPopup, setShowSelectionPopup] = useState(false);
-  const [selectionData, setSelectionData] = useState({ text: '', x: 0, y: 0 });
 
-  const stages = [
-    { key: 'draft', label: 'Draft' },
-    { key: 'review', label: 'Review' },
-    { key: 'approval', label: 'Approval' },
-    { key: 'published', label: 'Published' },
-  ];
+  const stages = ['Draft', 'Review', 'Approval', 'Published'];
 
   const handleMouseMove = (e: MouseEvent) => {
     if (!isDragging) return;
@@ -79,40 +88,46 @@ export default function RCMDemo() {
     }
   }, [isDragging]);
 
-  const handleTextSelection = () => {
-    const selection = window.getSelection();
-    if (!selection || selection.toString().trim().length < 3) {
-      setShowSelectionPopup(false);
-      return;
-    }
-
-    const text = selection.toString().trim();
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-
-    setSelectionData({
-      text,
-      x: rect.left + rect.width / 2,
-      y: rect.top + window.scrollY - 50,
-    });
-    setShowSelectionPopup(true);
+  const toggleAnnotation = (id: string) => {
+    setAnnotations((prev) =>
+      prev.map((ann) => (ann.id === id ? { ...ann, expanded: !ann.expanded } : ann))
+    );
   };
 
-  const createAnnotation = () => {
+  const toggleMenu = (id: string) => {
+    setOpenMenuId(openMenuId === id ? null : id);
+  };
+
+  const handleAnnotateToggle = () => {
+    setAnnotateMode(!annotateMode);
+    if (annotateMode) {
+      setAnnotateToolMode(null);
+    }
+  };
+
+  const handleTextSelection = () => {
+    if (!annotateMode || annotateToolMode !== 'highlight') return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.toString().trim().length < 3) return;
+
+    const text = selection.toString().trim();
     const newAnn: Annotation = {
-      id: `ann-${Date.now()}`,
-      kind: 'highlight',
-      text: selectionData.text,
-      snippet: selectionData.text.substring(0, 80) + '...',
+      id: `${Date.now()}`,
+      annCode: `ANN-${String(annotations.length + 1).padStart(3, '0')}`,
       author: 'You',
       timeAgo: 'just now',
       status: 'Pending',
+      snippet: text.substring(0, 80),
+      linkedClaimsCount: 0,
+      commentsCount: 0,
+      isAnchor: false,
+      expanded: true,
+      linkedClaims: [],
       comments: [],
     };
 
     setAnnotations((prev) => [newAnn, ...prev]);
-    setExpandedAnnotation(newAnn.id);
-    setShowSelectionPopup(false);
     window.getSelection()?.removeAllRanges();
   };
 
@@ -126,8 +141,9 @@ export default function RCMDemo() {
               ...ann,
               comments: [
                 ...ann.comments,
-                { id: `c-${Date.now()}`, text: newComment, author: 'You', timeAgo: 'just now' },
+                { author: 'You', text: newComment, timeAgo: 'just now' },
               ],
+              commentsCount: ann.commentsCount + 1,
             }
           : ann
       )
@@ -135,266 +151,415 @@ export default function RCMDemo() {
     setNewComment('');
   };
 
-  const toggleStatus = (annId: string) => {
+  const toggleResolve = (annId: string) => {
     setAnnotations((prev) =>
       prev.map((ann) =>
-        ann.id === annId ? { ...ann, status: ann.status === 'Pending' ? 'Resolved' : 'Pending' } : ann
+        ann.id === annId
+          ? { ...ann, status: ann.status === 'Pending' ? 'Resolved' : 'Pending' }
+          : ann
       )
     );
+    setOpenMenuId(null);
   };
 
   return (
-    <div className="rcm-app">
-      {/* Selection Popup */}
-      {showSelectionPopup && (
-        <div
-          className="rcm-selection-popup"
-          style={{ left: `${selectionData.x}px`, top: `${selectionData.y}px` }}
-          onClick={createAnnotation}
-        >
-          + Create Annotation
-        </div>
-      )}
-
+    <div className="rcm-exact-app">
       {/* Page Header */}
-      <div className="rcm-page-header">
+      <div className="rcm-page-header-shell">
         <Link href="/workflows" className="rcm-back-link">
           ← Back to Workflows
         </Link>
-        <div className="rcm-header-row">
-          <div className="rcm-header-main">
-            <div className="rcm-header-icon">
+
+        <div className="rcm-page-header">
+          <div className="rcm-page-header-main">
+            <div className="rcm-page-header-icon">
               <svg width="20" height="20" fill="#0176d3" viewBox="0 0 24 24">
                 <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
               </svg>
             </div>
-            <div className="rcm-header-titles">
-              <div className="rcm-eyebrow">Regulated Content</div>
-              <h1 className="rcm-title">Cordim Product Label - US Market</h1>
+            <div className="rcm-page-header-titles">
+              <p className="rcm-eyebrow">Regulated Content</p>
+              <h1 className="rcm-page-title">Cordim Product Label - US Market</h1>
             </div>
           </div>
-          <div className="rcm-header-actions">
-            <button className="rcm-btn rcm-btn-outline">Follow</button>
-            <button className="rcm-btn rcm-btn-outline">Edit</button>
-            <button className="rcm-btn rcm-btn-outline">Delete</button>
+          <div className="rcm-page-header-actions">
+            <button className="rcm-btn-neutral">Follow</button>
+            <button className="rcm-btn-neutral">Edit</button>
+            <button className="rcm-btn-neutral">Delete</button>
           </div>
         </div>
 
-        {/* Detail Panel */}
-        <div className="rcm-highlight-panel">
-          <div className="rcm-field">
-            <span className="rcm-label">Content Type</span>
-            <span className="rcm-value">Product Label</span>
-          </div>
-          <div className="rcm-field">
-            <span className="rcm-label">Type</span>
-            <span className="rcm-value">PDF</span>
-          </div>
-          <div className="rcm-field">
-            <span className="rcm-label">Version</span>
-            <span className="rcm-value">2.1</span>
-          </div>
-          <div className="rcm-field">
-            <span className="rcm-label">Status</span>
-            <span className="rcm-value">In Review</span>
-          </div>
-          <div className="rcm-field">
-            <span className="rcm-label">Effective Dates</span>
-            <span className="rcm-value">Q2 2026</span>
-          </div>
-        </div>
+        {/* Highlight Panel */}
+        <ul className="rcm-detail-row">
+          <li className="rcm-detail-block">
+            <label>Content Type</label>
+            <div>Product Label</div>
+          </li>
+          <li className="rcm-detail-block">
+            <label>Type</label>
+            <div>PDF</div>
+          </li>
+          <li className="rcm-detail-block">
+            <label>Version</label>
+            <div>2.1</div>
+          </li>
+          <li className="rcm-detail-block">
+            <label>Status</label>
+            <div>In Review</div>
+          </li>
+          <li className="rcm-detail-block">
+            <label>Effective Dates</label>
+            <div>Q2 2026</div>
+          </li>
+        </ul>
 
         {/* Path */}
         <div className="rcm-path-actions">
           <div className="rcm-path-rail">
-            {stages.map((stage, idx) => {
-              const currentIdx = stages.findIndex((s) => s.key === currentStage);
-              const isComplete = idx < currentIdx;
-              const isCurrent = stage.key === currentStage;
-              return (
-                <button
-                  key={stage.key}
-                  className={`rcm-path-stage ${isComplete ? 'complete' : ''} ${isCurrent ? 'current' : ''}`}
-                  onClick={() => setCurrentStage(stage.key as typeof currentStage)}
-                >
-                  {stage.label}
-                </button>
-              );
-            })}
+            {stages.map((stage, idx) => (
+              <button
+                key={idx}
+                className={`rcm-path-seg ${idx < currentStage ? 'complete' : ''} ${idx === currentStage ? 'current' : ''}`}
+                onClick={() => setCurrentStage(idx)}
+              >
+                {stage}
+              </button>
+            ))}
           </div>
-          <button className="rcm-btn rcm-btn-brand">✨ Extract & Match Claims</button>
+          <button className="rcm-btn-brand">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style={{ marginRight: '6px' }}>
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+            Extract &amp; Match Claims
+          </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="rcm-main-content">
-        {/* Document Viewer */}
-        <div className="rcm-viewer-container" style={{ width: `calc(100% - ${sidebarWidth}px)` }}>
-          <div className="rcm-viewer-toolbar">
-            <span className="rcm-toolbar-title">Document Viewer</span>
-            <div className="rcm-toolbar-controls">
-              <button className="rcm-icon-btn">−</button>
-              <button className="rcm-icon-btn">+</button>
-              <span className="rcm-page-indicator">Page 1 of 5</span>
-            </div>
-          </div>
-          <div className="rcm-document-scroll">
-            <div
-              ref={documentRef}
-              className="rcm-document-content"
-              onMouseUp={handleTextSelection}
-            >
-              <h1 className="doc-title">CORDIM® (Cordimetrix Hydrochloride)</h1>
-
-              <section className="doc-section">
-                <h2 className="doc-heading">INDICATIONS AND USAGE</h2>
-                <p className="doc-paragraph">
-                  Cordim is indicated for the treatment of arterial hypertension in adults to lower blood pressure.
-                  Lowering blood pressure reduces the risk of fatal and nonfatal cardiovascular events, primarily
-                  strokes and myocardial infarctions. These benefits have been demonstrated in controlled trials of
-                  antihypertensive drugs from various pharmacologic classes.
-                </p>
-              </section>
-
-              <section className="doc-section">
-                <h2 className="doc-heading">DOSAGE AND ADMINISTRATION</h2>
-                <p className="doc-paragraph">
-                  The recommended starting dose is 5 mg once daily. Depending on the patient's response, the dose may
-                  be increased to a maximum of 10 mg once daily. Dose adjustments should be made at intervals of at
-                  least 2 weeks based on clinical response and tolerability.
-                </p>
-                <ul className="doc-list">
-                  <li>Initial dose: 5 mg once daily</li>
-                  <li>Maximum dose: 10 mg once daily</li>
-                  <li>May be taken with or without food</li>
-                  <li>Dosage adjustments in special populations may be required</li>
-                </ul>
-              </section>
-
-              <section className="doc-section">
-                <h2 className="doc-heading">CLINICAL PHARMACOLOGY</h2>
-                <p className="doc-paragraph">
-                  Clinical efficacy was demonstrated in Phase III trials involving over 1,200 patients. Cordim showed
-                  statistically significant blood pressure reduction compared to placebo (p &lt; 0.001). The
-                  antihypertensive effect was sustained over 24 hours with once-daily dosing, providing consistent
-                  blood pressure control throughout the dosing interval.
-                </p>
-              </section>
-
-              <div className="doc-info-box">
-                <p>
-                  💡 <strong>Demo Tip:</strong> Select any text in this document to create annotations. Try
-                  highlighting different sections to see the annotation workflow in action!
-                </p>
+      <div className="rcm-article">
+        <div className="rcm-doc-layout">
+          {/* Document Viewer */}
+          <div className="rcm-doc-main" style={{ width: `calc(100% - ${sidebarWidth}px - 8px)` }}>
+            {/* Toolbar */}
+            <div className="rcm-viewer-toolbar">
+              <div className="rcm-toolbar-row">
+                <div className="rcm-file-title">
+                  <svg width="16" height="16" fill="#5c5c5c" viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
+                  </svg>
+                  <span>cordim-label-us.pdf</span>
+                </div>
+                <div className="rcm-toolbar-actions">
+                  <button className="rcm-btn-neutral">Download</button>
+                  <button className="rcm-icon-btn">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="5" r="2" />
+                      <circle cx="12" cy="12" r="2" />
+                      <circle cx="12" cy="19" r="2" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Resizer */}
-        <div
-          className="rcm-splitter"
-          onMouseDown={() => setIsDragging(true)}
-        />
-
-        {/* Annotation Panel */}
-        <div className="rcm-sidebar" style={{ width: `${sidebarWidth}px` }}>
-          {/* Tabs */}
-          <div className="rcm-tabs">
-            <button
-              className={`rcm-tab ${activeTab === 'annotations' ? 'active' : ''}`}
-              onClick={() => setActiveTab('annotations')}
-            >
-              Annotations ({annotations.length})
-            </button>
-            <button
-              className={`rcm-tab ${activeTab === 'workitems' ? 'active' : ''}`}
-              onClick={() => setActiveTab('workitems')}
-            >
-              Work Items
-            </button>
-            <button
-              className={`rcm-tab ${activeTab === 'assistant' ? 'active' : ''}`}
-              onClick={() => setActiveTab('assistant')}
-            >
-              Content Assistant
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          <div className="rcm-tab-content">
-            {activeTab === 'annotations' && (
-              <div className="rcm-annotations-list">
-                {annotations.map((ann) => (
-                  <div key={ann.id} className="rcm-annotation-card">
-                    <div className="rcm-ann-header">
-                      <div className="rcm-ann-meta">
-                        <span className={`rcm-status-badge ${ann.status === 'Pending' ? 'pending' : 'resolved'}`}>
-                          {ann.status}
-                        </span>
-                        {ann.isAnchor && <span className="rcm-anchor-badge">⚓</span>}
-                        {ann.linkedClaim && <span className="rcm-claim-link">{ann.linkedClaim}</span>}
-                      </div>
-                      <button className="rcm-expand-btn" onClick={() => setExpandedAnnotation(expandedAnnotation === ann.id ? null : ann.id)}>
-                        {expandedAnnotation === ann.id ? '−' : '+'}
+              {/* Annotate Toolbar */}
+              <div className="rcm-html-annotate-row">
+                <div className="rcm-annotate-start">
+                  <button
+                    className={annotateMode ? 'rcm-btn-brand' : 'rcm-btn-neutral'}
+                    onClick={handleAnnotateToggle}
+                  >
+                    Annotate
+                  </button>
+                  {annotateMode && (
+                    <div className="rcm-annotate-tools">
+                      <button
+                        className={`rcm-tool-btn ${annotateToolMode === 'highlight' ? 'active' : ''}`}
+                        onClick={() => setAnnotateToolMode('highlight')}
+                        title="Text highlight"
+                      >
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 14l3 3-6 6h6l6-6-3-3M3.5 12.5l9-9L16 7l-9 9-3.5-3.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        className={`rcm-tool-btn ${annotateToolMode === 'block' ? 'active' : ''}`}
+                        onClick={() => setAnnotateToolMode('block')}
+                        title="Select page element for block"
+                      >
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM4 19V5h16v14H4z" />
+                        </svg>
                       </button>
                     </div>
-                    <p className="rcm-ann-snippet">"{ann.snippet}"</p>
-                    <div className="rcm-ann-footer">
-                      <span className="rcm-ann-author">{ann.author}</span>
-                      <span className="rcm-ann-time">{ann.timeAgo}</span>
-                    </div>
-
-                    {expandedAnnotation === ann.id && (
-                      <div className="rcm-ann-details">
-                        <div className="rcm-comments">
-                          {ann.comments.map((comment) => (
-                            <div key={comment.id} className="rcm-comment">
-                              <div className="rcm-comment-header">
-                                <strong>{comment.author}</strong>
-                                <span className="rcm-comment-time">{comment.timeAgo}</span>
-                              </div>
-                              <p className="rcm-comment-text">{comment.text}</p>
-                            </div>
-                          ))}
-                        </div>
-                        <textarea
-                          className="rcm-comment-input"
-                          placeholder="Add a comment..."
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          rows={3}
-                        />
-                        <div className="rcm-ann-actions">
-                          <button className="rcm-btn rcm-btn-brand rcm-btn-sm" onClick={() => addComment(ann.id)}>
-                            Add Comment
-                          </button>
-                          <button className="rcm-btn rcm-btn-outline rcm-btn-sm" onClick={() => toggleStatus(ann.id)}>
-                            Mark {ann.status === 'Pending' ? 'Resolved' : 'Pending'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  )}
+                </div>
+                <p className="rcm-annotate-hint">
+                  Text: drag to select. Block: use the page tool—hover a region for a grey preview, then click; yellow shows your saved marks.
+                </p>
               </div>
-            )}
 
-            {activeTab === 'workitems' && (
-              <div className="rcm-empty-state">
-                <div className="rcm-empty-icon">📋</div>
-                <p>No work items assigned</p>
+              {/* Paging Row */}
+              <div className="rcm-toolbar-row rcm-paging-row">
+                <div className="rcm-paging">
+                  <button className="rcm-icon-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                    </svg>
+                  </button>
+                  <button className="rcm-icon-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                    </svg>
+                  </button>
+                  <span className="rcm-page-indicator">1 of 5</span>
+                  <button className="rcm-icon-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" />
+                    </svg>
+                  </button>
+                  <button className="rcm-icon-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="rcm-viewer-tools">
+                  <button className="rcm-icon-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                    </svg>
+                  </button>
+                  <button className="rcm-icon-btn">+</button>
+                  <button className="rcm-icon-btn">−</button>
+                  <select className="rcm-zoom-combo">
+                    <option>100%</option>
+                    <option>125%</option>
+                    <option>150%</option>
+                  </select>
+                </div>
               </div>
-            )}
+            </div>
 
-            {activeTab === 'assistant' && (
-              <div className="rcm-empty-state">
-                <div className="rcm-empty-icon">🤖</div>
-                <p>Content Assistant</p>
-                <p className="rcm-empty-subtitle">AI-powered content analysis coming soon</p>
+            {/* Document */}
+            <div className="rcm-document-preview">
+              <div
+                ref={documentRef}
+                className="rcm-document-content"
+                onMouseUp={handleTextSelection}
+              >
+                <h1 className="doc-title">CORDIM® (Cordimetrix Hydrochloride)</h1>
+
+                <section className="doc-section">
+                  <h2 className="doc-heading">INDICATIONS AND USAGE</h2>
+                  <p className="doc-text">
+                    Cordim is indicated for the treatment of arterial hypertension in adults to lower blood pressure.
+                    Lowering blood pressure reduces the risk of fatal and nonfatal cardiovascular events, primarily
+                    strokes and myocardial infarctions.
+                  </p>
+                </section>
+
+                <section className="doc-section">
+                  <h2 className="doc-heading">DOSAGE AND ADMINISTRATION</h2>
+                  <p className="doc-text">
+                    The recommended starting dose is 5 mg once daily. Depending on patient response, the dose may be
+                    increased to a maximum of 10 mg once daily.
+                  </p>
+                </section>
+
+                <section className="doc-section">
+                  <h2 className="doc-heading">CLINICAL PHARMACOLOGY</h2>
+                  <p className="doc-text">
+                    Clinical efficacy was demonstrated in Phase III trials with 1,200+ patients. Cordim showed
+                    significant blood pressure reduction compared to placebo (p &lt; 0.001).
+                  </p>
+                </section>
               </div>
-            )}
+            </div>
           </div>
+
+          {/* Splitter */}
+          <div
+            className="rcm-splitter"
+            onMouseDown={() => setIsDragging(true)}
+          />
+
+          {/* Sidebar */}
+          <aside className="rcm-doc-sidebar" style={{ width: `${sidebarWidth}px` }}>
+            {/* Scoped Tabs */}
+            <div className="slds-tabs_scoped">
+              <ul className="slds-tabs_scoped__nav" role="tablist">
+                <li className={`slds-tabs_scoped__item ${activeTab === 'annotations' ? 'slds-is-active' : ''}`}>
+                  <a className="slds-tabs_scoped__link" onClick={() => setActiveTab('annotations')}>
+                    Annotations ({annotations.length})
+                  </a>
+                </li>
+                <li className={`slds-tabs_scoped__item ${activeTab === 'workitems' ? 'slds-is-active' : ''}`}>
+                  <a className="slds-tabs_scoped__link" onClick={() => setActiveTab('workitems')}>
+                    Content Work Items
+                  </a>
+                </li>
+                <li className={`slds-tabs_scoped__item ${activeTab === 'assistant' ? 'slds-is-active' : ''}`}>
+                  <a className="slds-tabs_scoped__link" onClick={() => setActiveTab('assistant')}>
+                    Content Assistant
+                  </a>
+                </li>
+              </ul>
+
+              <div className="slds-tabs_scoped__content">
+                {activeTab === 'annotations' && (
+                  <div className="rcm-annotations-panel">
+                    <div className="rcm-annotations-list">
+                      {annotations.map((ann) => (
+                        <div key={ann.id} className="rcm-annotation-card">
+                          {/* Header */}
+                          <div className="rcm-ann-header">
+                            <button className="rcm-ann-chevron" onClick={() => toggleAnnotation(ann.id)}>
+                              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                                {ann.expanded ? (
+                                  <path d="M7 10l5 5 5-5z" />
+                                ) : (
+                                  <path d="M10 17l5-5-5-5v10z" />
+                                )}
+                              </svg>
+                            </button>
+                            <div className="rcm-ann-title-cluster">
+                              <p className="rcm-ann-code">{ann.annCode}</p>
+                              {ann.isAnchor && (
+                                <span className="rcm-anchor-badge" title="Marked as anchor">⚓</span>
+                              )}
+                            </div>
+                            <div className="rcm-ann-more-wrap">
+                              <button className="rcm-ann-more" onClick={() => toggleMenu(ann.id)}>
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                                  <circle cx="12" cy="5" r="2" />
+                                  <circle cx="12" cy="12" r="2" />
+                                  <circle cx="12" cy="19" r="2" />
+                                </svg>
+                              </button>
+                              {openMenuId === ann.id && (
+                                <div className="rcm-ann-dropdown">
+                                  <button>Copy link</button>
+                                  <button>Edit</button>
+                                  <button>Delete</button>
+                                  <button onClick={() => toggleResolve(ann.id)}>
+                                    {ann.status === 'Resolved' ? 'Unresolve' : 'Resolve'}
+                                  </button>
+                                  <button>Assign to...</button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Meta */}
+                          <div className="rcm-ann-meta">
+                            <svg width="12" height="12" fill="#706e6b" viewBox="0 0 24 24">
+                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                            </svg>
+                            <a className="rcm-ann-author">{ann.author}</a>
+                            <span className="rcm-ann-dot">·</span>
+                            <span className="rcm-ann-time">{ann.timeAgo}</span>
+                            <span className="rcm-ann-dot">·</span>
+                            <span className="rcm-ann-status">{ann.status}</span>
+                          </div>
+
+                          {/* Collapsed Badges */}
+                          {!ann.expanded && (
+                            <div className="rcm-collapsed-badges">
+                              {ann.linkedClaimsCount > 0 && (
+                                <button className="rcm-figma-badge">
+                                  {ann.linkedClaimsCount} linked claim{ann.linkedClaimsCount !== 1 ? 's' : ''}
+                                </button>
+                              )}
+                              {ann.commentsCount > 0 && (
+                                <button className="rcm-figma-badge">
+                                  {ann.commentsCount} comment{ann.commentsCount !== 1 ? 's' : ''}
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Expanded Body */}
+                          {ann.expanded && (
+                            <div className="rcm-ann-body">
+                              <div className="rcm-ann-snippet">
+                                <span className="rcm-snippet-quote">&quot;{ann.snippet}&quot;</span>
+                              </div>
+
+                              {/* Linked Claims Section */}
+                              <div className="rcm-ann-section">
+                                <h3 className="rcm-section-heading">
+                                  <span>Linked Claims ({ann.linkedClaimsCount})</span>
+                                  <a className="rcm-section-link">Link Claim</a>
+                                </h3>
+                                {ann.linkedClaims.length > 0 && (
+                                  <div className="rcm-linked-list">
+                                    {ann.linkedClaims.map((lc) => (
+                                      <div key={lc.code} className="rcm-linked-item">
+                                        <svg width="14" height="14" fill="#0176d3" viewBox="0 0 24 24">
+                                          <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
+                                        </svg>
+                                        <a className="rcm-claim-code">{lc.code}</a>
+                                        <span className="rcm-claim-text">{lc.text}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Comments Section */}
+                              <div className="rcm-ann-section">
+                                <h3 className="rcm-section-heading">
+                                  <span>Comments ({ann.commentsCount})</span>
+                                </h3>
+                                <div className="rcm-comments-list">
+                                  {ann.comments.map((comment, idx) => (
+                                    <div key={idx} className="rcm-comment">
+                                      <div className="rcm-comment-header">
+                                        <strong>{comment.author}</strong>
+                                        <span>{comment.timeAgo}</span>
+                                      </div>
+                                      <p className="rcm-comment-text">{comment.text}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                <textarea
+                                  className="rcm-comment-input"
+                                  placeholder="Write a comment..."
+                                  value={newComment}
+                                  onChange={(e) => setNewComment(e.target.value)}
+                                  rows={3}
+                                />
+                                <button
+                                  className="rcm-btn-brand rcm-btn-sm"
+                                  onClick={() => addComment(ann.id)}
+                                >
+                                  Add Comment
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'workitems' && (
+                  <div className="rcm-empty-state">
+                    <img src="/api/placeholder/80/80" alt="" className="rcm-empty-img" />
+                    <p>No work items assigned</p>
+                  </div>
+                )}
+
+                {activeTab === 'assistant' && (
+                  <div className="rcm-empty-state">
+                    <p>Content Assistant</p>
+                    <p className="rcm-empty-subtitle">AI-powered content analysis</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
