@@ -69,7 +69,7 @@ export default function PatternsPage() {
                     </p>
 
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {pattern.tags.map((tag) => (
+                      {pattern.tags.map((tag: string) => (
                         <span
                           key={tag}
                           className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
