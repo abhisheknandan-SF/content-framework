@@ -1,0 +1,1 @@
+self.__SSG_MANIFEST=new Set(["\u002Fpatterns\u002F[id]","\u002Fpatterns\u002F[id]\u002Fsimulate","\u002Fworkflows\u002F[id]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()
